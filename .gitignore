@@ -1,0 +1,10 @@
+# Datos descargados (pesan varios GB; se respaldan aparte, no en git)
+datos/
+
+# Entorno virtual y cachés de Python
+.venv/
+__pycache__/
+*.pyc
+
+# Llaves y secretos
+.env

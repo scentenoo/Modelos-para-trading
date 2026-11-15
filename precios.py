@@ -4,7 +4,7 @@ splits y dividendos con la tabla de datos/ajustes (ver descargar_ajustes.py).
 
 Uso:
     from precios import cargar
-    df = cargar("NVDA")                    # ajustado por splits y dividendos
+    df = cargar("NVDA")                    # ajustado por splits, dividendos y escisiones
     df = cargar("NVDA", ajuste="splits")   # solo splits
     df = cargar("NVDA", ajuste=None)       # tal como se negoció
 
@@ -12,10 +12,16 @@ El ajuste es hacia atrás: los precios de hoy quedan iguales y los anteriores a
 cada split o dividendo se multiplican por un factor, para que no haya saltos falsos.
     Split:      factor = acciones viejas / acciones nuevas   (10 por 1 -> 0,1)
     Dividendo:  factor = 1 - dividendo / cierre del día anterior
+    Escisión:   factor = 1 - (acciones nuevas recibidas x apertura de la empresa
+                nueva en su primer día) / cierre del día anterior
 
-Ojo: las escisiones (spin-offs) NO se ajustan, porque el factor depende del
-precio de la empresa nueva. Son pocas; dias_con_escision() da las fechas para
-excluir o revisar el salto de ese día.
+Ojo:
+  - Las escisiones (spin-offs) se ajustan junto con los dividendos (ajuste
+    "total"), pero el factor es aproximado: depende de a qué precio abrió la
+    empresa nueva. dias_con_escision() da las fechas, para excluir el salto de
+    ese día si se quiere ser estricto.
+  - El volumen solo se ajusta por splits.
+  - Los ajustes con fecha posterior al último día descargado se ignoran.
 """
 
 from pathlib import Path
@@ -50,28 +56,39 @@ def factores(simbolo: str, cierres: pd.Series) -> pd.DataFrame:
     regular, indexado por día. Devuelve las columnas `splits` y `dividendos`.
     """
     dias = cierres.index.values
-    salida = pd.DataFrame({"splits": 1.0, "dividendos": 1.0}, index=cierres.index)
+    ultimo = cierres.index.max()
+    salida = pd.DataFrame({"splits": 1.0, "dividendos": 1.0, "escisiones": 1.0}, index=cierres.index)
 
     partes = [s[s["symbol"] == simbolo] for s in (_ajustes("forward_splits"), _ajustes("reverse_splits")) if not s.empty]
     if partes:
         splits = pd.concat(partes)
+        splits = splits[splits["ex_date"] <= ultimo]
         salida["splits"] = _acumular(dias, splits["ex_date"], splits["old_rate"] / splits["new_rate"])
 
     div = _ajustes("cash_dividends")
     if not div.empty:
-        div = div[div["symbol"] == simbolo]
+        div = div[(div["symbol"] == simbolo) & (div["ex_date"] <= ultimo)]
         # Cierre de la última sesión anterior a la fecha ex-dividendo.
         pos = np.searchsorted(dias, div["ex_date"].values.astype(dias.dtype), side="left") - 1
         div = div[pos >= 0]
         cierre_previo = cierres.values[pos[pos >= 0]]
         salida["dividendos"] = _acumular(dias, div["ex_date"], 1 - div["rate"].values / cierre_previo)
+
+    esc = _ajustes("spin_offs")
+    if not esc.empty and "apertura_nueva" in esc.columns:
+        esc = esc[(esc["source_symbol"] == simbolo) & (esc["ex_date"] <= ultimo) & esc["apertura_nueva"].notna()]
+        pos = np.searchsorted(dias, esc["ex_date"].values.astype(dias.dtype), side="left") - 1
+        esc = esc[pos >= 0]
+        cierre_previo = cierres.values[pos[pos >= 0]]
+        recibido = esc["new_rate"].values / esc["source_rate"].values * esc["apertura_nueva"].values
+        salida["escisiones"] = _acumular(dias, esc["ex_date"], 1 - recibido / cierre_previo)
     return salida
 
 
 def cargar(simbolo: str, ajuste: str | None = "total", carpeta: Path = CARPETA_VELAS) -> pd.DataFrame:
     """
     Velas de 1 minuto de un símbolo, ordenadas por hora (UTC).
-    ajuste: "total" (splits y dividendos), "splits" o None (sin ajustar).
+    ajuste: "total" (splits, dividendos y escisiones), "splits" o None (sin ajustar).
     Agrega la columna `dia`: fecha de la sesión en hora de Nueva York.
     """
     if ajuste not in ("total", "splits", None):
@@ -95,14 +112,14 @@ def cargar(simbolo: str, ajuste: str | None = "total", carpeta: Path = CARPETA_V
 
     f = factores(simbolo, cierres)
     f_splits = df["dia"].map(f["splits"]).values
-    f_precio = f_splits * df["dia"].map(f["dividendos"]).values if ajuste == "total" else f_splits
+    f_precio = f_splits * df["dia"].map(f["dividendos"] * f["escisiones"]).values if ajuste == "total" else f_splits
     df[COLUMNAS_PRECIO] = df[COLUMNAS_PRECIO].mul(f_precio, axis=0)
     df["volume"] = df["volume"] / f_splits
     return df
 
 
 def dias_con_escision(simbolo: str) -> list[pd.Timestamp]:
-    """Fechas en que el símbolo escindió una empresa: el salto de ese día no está ajustado."""
+    """Fechas en que el símbolo escindió una empresa: el ajuste de ese día es aproximado."""
     esc = _ajustes("spin_offs")
     if esc.empty:
         return []

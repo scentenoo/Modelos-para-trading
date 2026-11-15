@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) casi terminada. Las velas ajustadas, los ajustes corporativos y las noticias ya están descargados; falta que termine la descarga de velas sin ajustar y sumar las dos fuentes de la SEC.
+**Dónde vamos:** Fase 1 (datos) casi terminada. Ya están descargadas y comprobadas las cinco fuentes: velas, ajustes corporativos, noticias, comunicados de la SEC y cifras financieras. Solo falta la actualización diaria automática (paso 1.9).
 
 ## 2. Cómo funciona el sistema
 
@@ -59,7 +59,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | Fase | Cuándo | Estado | Criterio de salida |
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Falta escribir los criterios de éxito | Llaves funcionando y criterios de éxito escritos |
-| 1 · Datos | Semanas 2–3 | En curso | La base se actualiza sola sin intervención |
+| 1 · Datos | Semanas 2–3 | Falta solo la actualización automática | La base se actualiza sola sin intervención |
 | 2 · Investigación histórica | Semanas 4–11 | Por empezar | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
@@ -74,14 +74,14 @@ Cada fase avanza solo si cumple su criterio de salida.
 ### Fase 1 · Datos
 
 - [x] 1.1 Velas de 1 minuto, ajustadas: 70,9 millones de velas de los 53 símbolos, 2016–2026. Quedan como copia de comprobación en `datos/minuto_ajustado`.
-- [ ] 1.2 Velas de 1 minuto, sin ajustar: descarga en curso hacia `datos/minuto`. Son la base de trabajo.
-- [x] 1.3 Ajustes corporativos: 1.916 dividendos, 16 splits y 7 escisiones, en `datos/ajustes`.
-- [x] 1.4 Ajuste al leer: `precios.py` corrige splits y dividendos. Coincide con el ajuste de Alpaca con una diferencia máxima de 0,012% en NVDA y KO.
-- [ ] 1.5 Comprobar el ajuste contra la copia ajustada en los 53 símbolos, cuando termine 1.2.
+- [x] 1.2 Velas de 1 minuto, sin ajustar: 70,9 millones de velas en `datos/minuto`, 2,2 GB, sin errores. Son la base de trabajo.
+- [x] 1.3 Ajustes corporativos: 1.944 dividendos, 16 splits y 7 escisiones, en `datos/ajustes`.
+- [x] 1.4 Ajuste al leer: `precios.py` corrige splits, dividendos y escisiones.
+- [x] 1.5 Ajuste comprobado contra la copia ajustada en los 53 símbolos: 49 coinciden con una diferencia máxima de 0,08%. Las otras cuatro tienen escisiones, donde el ajuste es aproximado (ver sección 4).
 - [x] 1.6 Noticias: 339.955 noticias de 2016 a hoy, en `datos/noticias`.
-- [ ] 1.7 Comunicados oficiales 8-K de la SEC.
-- [ ] 1.8 Cifras de resultados trimestrales de la SEC.
-- [ ] 1.9 Actualización diaria automática de velas, ajustes y noticias.
+- [x] 1.7 Comunicados oficiales 8-K de la SEC: 8.333 comunicados de las 50 acciones (2.342 de resultados trimestrales) y 14.272 documentos de texto, en `datos/sec`.
+- [x] 1.8 Cifras financieras de la SEC: las 50 acciones, en `datos/sec/cifras`.
+- [ ] 1.9 Actualización diaria automática de velas, ajustes, noticias y datos de la SEC.
 
 ### Fase 2 · Investigación histórica
 
@@ -129,8 +129,8 @@ Fuente principal: Alpaca, plan gratuito ($0). Todo sale con las mismas llaves de
 | Velas de 1 minuto, ajustadas | Lo mismo, ajustado por Alpaca a la fecha de descarga. Solo para comprobar | `datos/minuto_ajustado` | `descargar_datos.py --ajuste all` |
 | Ajustes corporativos | Splits, dividendos y escisiones: sirven solo para corregir saltos falsos de precio, no para decidir | `datos/ajustes` | `descargar_ajustes.py` |
 | Noticias | Titular, resumen, texto, símbolos y hora al segundo, desde 2016 | `datos/noticias` | `descargar_noticias.py` |
-| Comunicados oficiales (SEC) | Formularios 8-K: lo que la empresa informa por obligación legal | Por hacer | Por hacer |
-| Cifras de resultados (SEC) | Ingresos, utilidad y ganancia por acción de cada trimestre | Por hacer | Por hacer |
+| Comunicados oficiales (SEC) | Formularios 8-K y sus anexos de prensa: lo que la empresa informa por obligación legal, con hora de publicación y tema | `datos/sec/comunicados` e índice en `datos/sec/comunicados_indice.parquet` | `descargar_sec.py` |
+| Cifras financieras (SEC) | Todo lo que la empresa reporta en formato estructurado: ingresos, utilidad, ganancia por acción y demás | `datos/sec/cifras` | `descargar_sec.py` |
 
 Formato: Parquet, un archivo por símbolo y año para las velas y uno por mes para las noticias. SQLite para el registro de decisiones.
 
@@ -140,7 +140,9 @@ Un split o un dividendo cambia el precio de una acción sin que la empresa valga
 
 - Se guardan los precios a los que realmente se negoció, que nunca cambian y son los que verán los competidores en vivo.
 - `precios.py` los corrige al leerlos, con la tabla de ajustes.
-- Las escisiones no se corrigen, porque el factor depende del precio de la empresa nueva. Son 7 en 11 años (GE, HON, PFE y T); esos días se excluyen.
+- Las escisiones también se corrigen, pero de forma aproximada: el factor depende del precio al que abrió la empresa nueva en su primer día. Son 7 en 11 años (GE, HON, PFE y T).
+- Frente al ajuste de Alpaca, esas cuatro acciones difieren: T 0,7%, GE 1%, HON 4% y PFE 5%. En PFE la diferencia es porque Alpaca no ajusta la escisión de Viatris de 2020 y aquí sí. En las otras, por el precio que se toma de la empresa nueva.
+- Alpaca entrega los dividendos por fecha de pago, no por fecha ex-dividendo; por eso `descargar_ajustes.py` pide seis meses hacia adelante.
 
 ### Lo que se sabe de las noticias
 
@@ -149,14 +151,26 @@ Un split o un dividendo cambia el precio de una acción sin que la empresa valga
 - El reparto es desigual: SPY tiene 82.000 y Tesla 39.000, mientras las de servicios públicos y LIN tienen alrededor de mil cada una.
 - Si una noticia fue corregida después de publicarse, el texto guardado es el corregido. Para no usar información del futuro se trata como disponible desde la fecha de corrección.
 
+### A qué hora sale la información
+
+| Fuente | Antes de la apertura | En horario de mercado | Después del cierre | Fin de semana |
+| --- | --- | --- | --- | --- |
+| Noticias | 33% | 53% | 11% | 3% |
+| Comunicados 8-K | 30% | 16% | 54% | — |
+
+La mitad de las noticias sale con el mercado abierto, que es donde se puede operar en los minutos siguientes. Los comunicados oficiales, y sobre todo los resultados trimestrales, salen casi siempre fuera de sesión: ahí hay poco volumen y operar cuesta más. El paso 2.1 debe medir los costos por separado en los tres momentos.
+
 ### Para qué la SEC
 
-Un comunicado 8-K suele salir antes que la nota de prensa que lo resume, así que le da a la IA el texto original y más temprano. Con las cifras de resultados, la "sorpresa" de un trimestre se calcula con números en vez de pedírsela a la IA.
+Un comunicado 8-K suele salir antes que la nota de prensa que lo resume, así que le da a la IA el texto original y más temprano. Con las cifras de resultados, la "sorpresa" de un trimestre se calcula con números en vez de pedírsela a la IA. La SEC solo trae lo que la empresa reportó, no lo que esperaban los analistas (ese dato es de pago), así que la sorpresa se mide contra el mismo trimestre del año anterior.
+
+Cada comunicado trae la hora exacta en que quedó público (verificada en UTC) y el tema que trata; el tema 2.02 marca los resultados trimestrales.
 
 ### Limitaciones anotadas
 
 - **Sesgo de supervivencia:** el universo son empresas que existen hoy.
 - **LIN** tiene datos solo desde 2018, cuando empezó a cotizar con ese símbolo.
+- **Empresas reorganizadas:** Exxon (2026), Disney (2019) y Broadcom (2018) pasaron a una sociedad nueva y la SEC les dio otro número de registro. `descargar_sec.py` tiene una tabla con los registros anteriores; si otra empresa se reorganiza, hay que agregarla ahí.
 
 ### Pagos opcionales
 
@@ -194,9 +208,10 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | Archivo | Qué hace |
 | --- | --- |
 | `descargar_datos.py` | Baja las velas de 1 minuto. Sin ajustar por defecto; `--ajuste all` para ajustadas; `--forzar` para volver a bajar todo. Si se interrumpe, retoma donde iba |
-| `descargar_ajustes.py` | Baja splits, dividendos y escisiones |
+| `descargar_ajustes.py` | Baja splits, dividendos y escisiones, con el precio de apertura de cada empresa escindida |
 | `descargar_noticias.py` | Baja las noticias, un archivo por mes |
-| `precios.py` | Lee las velas y las corrige por splits y dividendos: `cargar("NVDA")` |
+| `descargar_sec.py` | Baja de la SEC el índice de comunicados 8-K, las cifras financieras y los textos. Necesita `SEC_USER_AGENT` en `.env` |
+| `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 
 ### Habilidades instaladas en `.claude/skills/`
 
@@ -274,7 +289,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 ### Decisiones cerradas
 
 - [x] Universo: SPY, QQQ, IWM y 50 acciones (lista en `descargar_datos.py`).
-- [x] Precios sin ajustar, con splits y dividendos aplicados al leer.
+- [x] Precios sin ajustar, con splits, dividendos y escisiones aplicados al leer.
 - [x] La IA lee noticias; los modelos de árboles leen velas.
 - [x] El éxito se mide en ganancia neta, no en acierto.
 - [x] El horizonte sigue siendo corto.

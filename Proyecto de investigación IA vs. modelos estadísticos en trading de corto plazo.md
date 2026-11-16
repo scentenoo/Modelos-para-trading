@@ -110,7 +110,8 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
   - [x] PC viejo con Debian sin entorno gráfico.
   - [x] Ollama instalado en el PC viejo, con el modelo pequeño `llama3.2:1b` (mil millones de parámetros, cuantizado, ~1,3 GB), sirviendo peticiones por su API local en el puerto 11434.
   - [x] Instrucciones y formato de respuesta diseñados (versión 1) y `lector_noticias.py` programado, con conexión a Ollama.
-  - [ ] Probar `llama3.2:1b` con noticias históricas en el PC viejo: JSON válido, repetibilidad, latencia (solo formato, nunca acierto).
+  - [x] Probar `llama3.2:1b` con noticias históricas en el PC viejo (solo formato y latencia, nunca acierto). Primera prueba: 0 de 24 válidas (devolvía la lista como texto, inventaba símbolos y valores, y se cortaba a los 120 s). Con un esquema JSON en la petición a Ollama (un objeto por símbolo enviado y solo los valores permitidos; no cambia el texto de las instrucciones): 7 de 7 válidas al primer intento, con latencia mediana de 100 s y máxima de 151 s por noticia (584 tokens de entrada y 113 de salida en promedio).
+  - [ ] Medir la repetibilidad (la misma noticia dos veces da la misma respuesta).
   - [ ] Modelo mediano (7–8B) en el portátil y Claude por API (falta la clave).
 
 #### Resultado del paso 2.1
@@ -727,7 +728,7 @@ El PC viejo queda como servidor 24/7 en la red local; el portátil hace desarrol
 
 | Componente | Rol | Notas |
 | --- | --- | --- |
-| PC viejo (Debian sin entorno gráfico, \~4 GB) | Descarga datos, guarda, programa tareas, registra decisiones; sirve el modelo de IA pequeño | Debian instalado (noviembre de 2026). Aloja Ollama con `llama3.2:1b` cuantizado (~1,3 GB), dentro del límite de 4 GB de RAM; API local en el puerto 11434. Falta: SSH con llaves, IP fija, cable de red si es posible |
+| PC viejo (portátil con AMD A6-9220e, 2 núcleos, \~4 GB, Debian sin entorno gráfico) | Descarga datos, guarda, programa tareas, registra decisiones; sirve el modelo de IA pequeño | Debian instalado (noviembre de 2026). Aloja Ollama con `llama3.2:1b` cuantizado (~1,3 GB), dentro del límite de 4 GB de RAM; API en el puerto 11434, abierta a la red local y Tailscale. El procesador es de muy bajo consumo: bajo carga va a ~1,3 GHz (máximo nominal 1,6), sin calentarse; por eso el modelo tarda ~100 s por noticia. La batería le sirve de respaldo. Falta: SSH con llaves, IP fija, cable de red si es posible |
 | Portátil (Celeron N5095, 16 GB) | Desarrollo, entrenamiento de modelos de árboles, modelos locales pequeños | Agregar un segundo módulo DDR4 para doble canal |
 | Claude por API | Lectura de noticias en tiempo real | Se paga aparte del plan Pro |
 | Google Drive | Respaldo nocturno con rclone | No se trabaja directo desde Drive |
@@ -746,7 +747,7 @@ El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo
 - **El PC viejo no descarga el histórico.** Baja solo el año en curso (unos 8 minutos), que alcanza para las variables que miran hacia atrás, como la volatilidad de los últimos 20 días.
 - **Reentrenamiento:** cada mes o cada trimestre, en el portátil. Se le copian los datos nuevos que acumuló el PC viejo, se reentrena y se devuelve el archivo del modelo.
 - **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
-- **Modelos de IA locales:** el pequeño (`llama3.2:1b`) corre en el PC viejo con Ollama. Uno mediano (7–8B) no cabe en sus 4 GB: o corre en el portátil, o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
+- **Modelos de IA locales:** el pequeño (`llama3.2:1b`) corre en el PC viejo con Ollama, a ~100 s por noticia. En horario de mercado sale una noticia cada 5 minutos en promedio, así que alcanza en un día normal; cuando salen muchas juntas se forma una cola de varios minutos, que entra en su resultado porque cada respuesta cuenta desde que llega. Uno mediano (7–8B) no cabe en sus 4 GB ni tendría velocidad útil: corre en el portátil o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
 
 El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama3.2:1b` (noviembre de 2026). Lo siguiente es probar ese modelo con `lector_noticias.py` y configurar SSH con llaves e IP fija.
 

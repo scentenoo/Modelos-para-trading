@@ -6,8 +6,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Objetivo:** construir un sistema de corto plazo que gane dinero después de costos. Cada parte hace lo que mejor sabe hacer: la IA lee noticias y los modelos de árboles trabajan con los números de las velas.
 
-**Pregunta:** ¿la información que una IA saca de las noticias mejora la ganancia neta de un modelo estadístico de corto plazo? ¿Mejora más a medida que crece el modelo de IA?
-
+**Pregunta:** ¿la información que una IA saca de las noticias mejora la ganancia neta de un modelo estadístico de corto plazo?
 - **H0:** agregar la IA no aumenta la ganancia neta por operación frente al modelo de velas solo ni frente a la referencia.
 - **H1:** el sistema con IA obtiene una ganancia neta por operación mayor, con significancia estadística.
 
@@ -44,9 +43,9 @@ Todos operan las mismas acciones, al mismo tiempo y con la misma capa de riesgo.
 | C · IA sola | El LLM lee la noticia y decide | Mide cuánto vale la noticia por sí sola |
 | D · IA + velas | Las variables que la IA saca de la noticia, más las de velas, más la reacción del precio frente al tono (noticia buena sin subida, noticia mala sin caída) | Hipótesis principal |
 
-### Diseño por escala
+### El modelo de IA
 
-C y D se corren con LLM de distinto tamaño: local pequeño (1–3B), local mediano (7–8B), Claude Haiku y un Claude grande. Si el tamaño importa, la ganancia neta debe subir con el tamaño. Se prueba con una prueba de tendencia sobre el orden de los modelos, porque Anthropic no publica el número de parámetros de Claude. La latencia se registra aparte: un modelo más grande puede entender mejor la noticia pero llegar tarde.
+C y D usan un solo LLM: Claude Haiku 5.5 (`claude-haiku-5-5`) por API, con salida estructurada (esquema JSON). Decidido el 16 de noviembre de 2026: cuesta unos pocos dólares al mes con ~150 noticias al día, responde en segundos y no necesita equipo propio. Se probó un modelo local (`llama3.2:1b` en el PC viejo): con esquema JSON da respuestas válidas, pero tarda ~100 s por noticia. Con un solo modelo se deja de lado la pregunta de si la ganancia crece con el tamaño del modelo (antes: modelos locales de 1–3B y 7–8B, Haiku y un Claude grande). La latencia de cada respuesta se registra igual.
 
 ### Regla sobre la IA y el pasado
 
@@ -106,13 +105,14 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
   - 2.6.a y 2.6.b se probaron juntas como segunda versión, para gastar una sola variante por horizonte; la corrida completa tarda unos 80 minutos en el portátil. XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
 - [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
-- [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, los modelos de IA locales y las instrucciones para que la IA lea noticias.
+- [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, el modelo de IA y las instrucciones para que la IA lea noticias. El modelo es Claude Haiku 5.5 por API (ver "El modelo de IA"); los modelos locales quedaron como prueba.
   - [x] PC viejo con Debian sin entorno gráfico.
   - [x] Ollama instalado en el PC viejo, con el modelo pequeño `llama3.2:1b` (mil millones de parámetros, cuantizado, ~1,3 GB), sirviendo peticiones por su API local en el puerto 11434.
   - [x] Instrucciones y formato de respuesta diseñados (versión 1) y `lector_noticias.py` programado, con conexión a Ollama.
   - [x] Probar `llama3.2:1b` con noticias históricas en el PC viejo (solo formato y latencia, nunca acierto). Primera prueba: 0 de 24 válidas (devolvía la lista como texto, inventaba símbolos y valores, y se cortaba a los 120 s). Con un esquema JSON en la petición a Ollama (un objeto por símbolo enviado y solo los valores permitidos; no cambia el texto de las instrucciones): 7 de 7 válidas al primer intento, con latencia mediana de 100 s y máxima de 151 s por noticia (584 tokens de entrada y 113 de salida en promedio).
   - [ ] Medir la repetibilidad (la misma noticia dos veces da la misma respuesta).
-  - [ ] Modelo mediano (7–8B) en el portátil y Claude por API (falta la clave).
+  - [ ] Conectar Claude Haiku 5.5 en `lector_noticias.py` y probarlo con noticias históricas (formato, repetibilidad, latencia y costo). Falta la clave de la API.
+  - Ya no se hace: modelo mediano (7–8B) en el portátil. Ollama y `llama3.2:1b` siguen instalados en el PC viejo, sin uso en el experimento.
 
 #### Resultado del paso 2.1
 
@@ -424,7 +424,7 @@ Diseño del 16 de noviembre de 2026. Las instrucciones y el formato se fijan ant
 | `confianza` | 0 a 1 | C y tamaño de posición |
 | `razon` | Una frase de hasta 20 palabras | Revisión (paso 3.5) |
 
-- **Por qué estas escalas:** valores pocos y enteros, para que un modelo de 1–3B los pueda dar de forma estable; los mismos para todos los tamaños, para que la comparación por escala sea justa.
+- **Por qué estas escalas:** valores pocos y enteros, para que las respuestas sean estables y fáciles de validar.
 - **`novedad` es nueva frente al plan:** buena parte de las notas de Benzinga son resúmenes de "acciones que se mueven hoy". Sin ese campo, la IA le daría tono a un movimiento que ya ocurrió.
 - **Parámetros fijos:** temperatura 0, el mismo texto de instrucciones para todos los modelos, y el horizonte como dato de las instrucciones (queda el que salga de la decisión abierta).
 
@@ -514,16 +514,16 @@ Con las operaciones de la idea 5 como B (2020–2024): 27 operaciones al día, d
 
 - **Supuestos:** f entre 15% y 25% sale de los diagnósticos (13% a 15% de los momentos tienen noticia en la última hora; un tercio, noticias del día). δ = 5 bps por operación afectada ya sería casi el doble de la ganancia neta de B.
 - **Puede ser peor:** la desviación diaria real de B (1.187 bps) es mayor que la que darían operaciones independientes (714), porque las operaciones de un mismo día se mueven juntas. Si eso pasa también con la diferencia entre D y B, los meses se multiplican hasta por 2,8.
-- **Con los cuatro tamaños de LLM** y corrección de Bonferroni, z sube a 3,08: hace falta un 50% más de tiempo.
+- **Con varios LLM** y corrección de Bonferroni (por ejemplo, cuatro), z sube a 3,08 y hace falta un 50% más de tiempo. Con un solo LLM (Haiku 5.5) no hace falta esa corrección.
 - **Conclusión:** con efectos realistas (5 a 10 bps en el 15% a 25% de las operaciones), 5 meses no alcanzan; harían falta entre 8 meses y varios años. Un ajuste inicial de 2 a 3 meses empeora el problema.
 
 **Formas de ganar potencia, por decidir antes de empezar:**
-1. **Un solo LLM como prueba principal** (el que se elija en el paso 2.9) y los demás tamaños como análisis secundario: evita la corrección por cuatro.
+1. **Un solo LLM como prueba principal:** evita la corrección por varios modelos.
 2. **Medir D contra B en la parte de selección** (con la parte de mercado cubierta): baja la desviación de 137 a 107 bps y ahorra cerca de 40% del tiempo. Cambia el criterio de la sección 5, que mide sin cobertura.
 3. **Una prueba de señal además de la de ganancia:** comparar el orden predicho por D y por B en todas las acciones y momentos, operen o no (300 observaciones al día en vez de 27). No reemplaza la ganancia neta como criterio, pero dice antes si la IA aporta.
 4. **Ajuste inicial corto:** una capa de unos 7 coeficientes con penalización se puede ajustar con un mes de datos.
 
-**Decidido el 16 de noviembre de 2026:** se adoptan la 1, la 3 y la 4. La prueba principal de D contra B usa un solo LLM, elegido en el paso 2.9 antes de empezar; los demás tamaños son análisis secundario, sin corrección. Se agrega la prueba de señal (orden predicho por D frente al de B en todas las acciones y momentos), como apoyo, sin reemplazar la ganancia neta. El ajuste inicial de la capa de D dura un mes. La 2 (medir en la parte de selección) queda para después, porque cambia un criterio escrito. Aun así, la Fase 3 probablemente necesita más de 5 meses; su duración se fija al elegir el LLM.
+**Decidido el 16 de noviembre de 2026:** se adoptan la 1, la 3 y la 4. La prueba principal de D contra B usa un solo LLM: Claude Haiku 5.5 (sin otros tamaños desde el 16 de noviembre de 2026). Se agrega la prueba de señal (orden predicho por D frente al de B en todas las acciones y momentos), como apoyo, sin reemplazar la ganancia neta. El ajuste inicial de la capa de D dura un mes. La 2 (medir en la parte de selección) queda para después, porque cambia un criterio escrito. Aun así, la Fase 3 probablemente necesita más de 5 meses; su duración se fija al elegir el LLM.
 
 
 ### Fase 4 · Dinero real
@@ -601,7 +601,7 @@ Las métricas y el umbral de éxito se fijan por escrito antes de ver resultados
 - **Métrica principal:** ganancia neta por operación, después de diferencial, deslizamiento y comisiones.
 - **Métricas de apoyo:** Sharpe, caída máxima, ganancia total, tasa de acierto, calibración de la confianza.
 - **Validación:** hacia adelante (walk-forward) y una muestra final que no se toca hasta el cierre.
-- **Comparaciones múltiples:** se prueban varios competidores y varios tamaños de LLM; elegir el mejor entre muchos infla el resultado. Se usa el Reality Check de White o el test SPA de Hansen, el Deflated Sharpe ratio, y Romano-Wolf o Bonferroni para varias hipótesis.
+- **Comparaciones múltiples:** se prueban varios competidores y variantes; elegir el mejor entre muchos infla el resultado. Se usa el Reality Check de White o el test SPA de Hansen, el Deflated Sharpe ratio, y Romano-Wolf o Bonferroni para varias hipótesis.
 - **Ventaja propia:** se separa la ganancia que viene de estar expuesto al mercado de la que es ventaja real, con `residual-edge-analyzer`.
 - **Tamaño de muestra:** según el paso 2.1, entre 2.000 y 4.600 operaciones si el acierto real es de 57%, y muchas más si es menor. Se fija al elegir el horizonte.
 - **Muestra efectiva:** los datos de minutos están autocorrelacionados, y varias acciones reaccionan a la misma noticia; millones de filas no equivalen a millones de observaciones independientes.
@@ -633,7 +633,7 @@ Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
 2. Ganancia neta por operación positiva.
 3. Al menos 2.000 operaciones de D. Si a los 8 meses no se llega, se cierra y H0 no se rechaza.
 
-La prueba de tendencia por tamaño de LLM es secundaria: se reporta, pero no decide.
+D y C usan un solo LLM, Claude Haiku 5.5. La prueba de tendencia por tamaño de LLM se quitó el 16 de noviembre de 2026.
 
 **Fase 4: además, para pasar a dinero real**
 
@@ -675,7 +675,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `horizonte_largo.py` | Idea 5: modelo de velas con salida a las 15:55, seis decisiones al día y costo de la época; escribe `resultados/horizonte_largo.md`. Con `--rapido` prueba solo 2024 |
 | `recostear_variantes.py` | Guarda las operaciones de las 10 variantes anteriores y de la referencia con el costo de la época (`operaciones_epoca_<h>.parquet`), que usa `comparaciones.py` |
 | `revision_cierre.py` | Revisión contra el sobreajuste de la idea 5: umbral, hora de salida, costo, mercado y concentración; escribe `resultados/revision_cierre.md` |
-| `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Se conecta por HTTP a la API de Ollama (`localhost:11434` u otra dirección con `--url`), pidiendo salida JSON con temperatura 0 y semilla fija; tiene además un modelo simulado para las pruebas. Falta Claude por API |
+| `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Tiene un modelo simulado para las pruebas y la conexión a Ollama (`--ollama`, con esquema JSON), que se usó para probar `llama3.2:1b`. Falta conectar Claude Haiku 5.5, el modelo del experimento |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
@@ -728,9 +728,9 @@ El PC viejo queda como servidor 24/7 en la red local; el portátil hace desarrol
 
 | Componente | Rol | Notas |
 | --- | --- | --- |
-| PC viejo (portátil con AMD A6-9220e, 2 núcleos, \~4 GB, Debian sin entorno gráfico) | Descarga datos, guarda, programa tareas, registra decisiones; sirve el modelo de IA pequeño | Debian instalado (noviembre de 2026). Aloja Ollama con `llama3.2:1b` cuantizado (~1,3 GB), dentro del límite de 4 GB de RAM; API en el puerto 11434, abierta a la red local y Tailscale. El procesador es de muy bajo consumo: bajo carga va a ~1,3 GHz (máximo nominal 1,6), sin calentarse; por eso el modelo tarda ~100 s por noticia. La batería le sirve de respaldo. Falta: SSH con llaves, IP fija, cable de red si es posible |
-| Portátil (Celeron N5095, 16 GB) | Desarrollo, entrenamiento de modelos de árboles, modelos locales pequeños | Agregar un segundo módulo DDR4 para doble canal |
-| Claude por API | Lectura de noticias en tiempo real | Se paga aparte del plan Pro |
+| PC viejo (portátil con AMD A6-9220e, 2 núcleos, \~4 GB, Debian sin entorno gráfico) | Descarga datos, guarda, programa tareas, registra decisiones y llama a Claude Haiku 5.5 por API | Debian instalado (noviembre de 2026). Tiene Ollama con `llama3.2:1b` (~1,3 GB, puerto 11434), que se usó para probar un modelo local y no forma parte del experimento. El procesador es de muy bajo consumo: bajo carga va a ~1,3 GHz (máximo nominal 1,6), sin calentarse; por eso el modelo local tardaba ~100 s por noticia. La batería le sirve de respaldo. Falta: SSH con llaves, IP fija, cable de red si es posible |
+| Portátil (Celeron N5095, 16 GB) | Desarrollo y entrenamiento de modelos de árboles | Agregar un segundo módulo DDR4 para doble canal |
+| Claude Haiku 5.5 por API | Lectura de noticias en tiempo real (C y D) | Se paga aparte del plan Pro: unos pocos dólares al mes con ~150 noticias al día ($0,10 por millón de tokens de entrada y $0,50 de salida) |
 | Google Drive | Respaldo nocturno con rclone | No se trabaja directo desde Drive |
 | Kaggle / Colab | GPU gratis para redes neuronales más grandes | Solo si hace falta |
 
@@ -747,9 +747,9 @@ El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo
 - **El PC viejo no descarga el histórico.** Baja solo el año en curso (unos 8 minutos), que alcanza para las variables que miran hacia atrás, como la volatilidad de los últimos 20 días.
 - **Reentrenamiento:** cada mes o cada trimestre, en el portátil. Se le copian los datos nuevos que acumuló el PC viejo, se reentrena y se devuelve el archivo del modelo.
 - **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
-- **Modelos de IA locales:** el pequeño (`llama3.2:1b`) corre en el PC viejo con Ollama, a ~100 s por noticia. En horario de mercado sale una noticia cada 5 minutos en promedio, así que alcanza en un día normal; cuando salen muchas juntas se forma una cola de varios minutos, que entra en su resultado porque cada respuesta cuenta desde que llega. Uno mediano (7–8B) no cabe en sus 4 GB ni tendría velocidad útil: corre en el portátil o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
+- **Modelo de IA:** Claude Haiku 5.5 por API; el PC viejo solo envía las noticias y guarda las respuestas. Se probó un modelo local (`llama3.2:1b` con Ollama en el PC viejo): con esquema JSON responde bien, pero a ~100 s por noticia, y un modelo mediano (7–8B) no cabe en sus 4 GB. Por costo, velocidad y mantenimiento se eligió Haiku (16 de noviembre de 2026).
 
-El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama3.2:1b` (noviembre de 2026). Lo siguiente es probar ese modelo con `lector_noticias.py` y configurar SSH con llaves e IP fija.
+El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Lo siguiente es configurar SSH con llaves e IP fija.
 
 ## 9. Reglas y decisiones
 
@@ -765,7 +765,6 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
-- [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 
 ### Decisiones cerradas
@@ -779,6 +778,7 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama
 - [x] Se opera solo en las acciones baratas de operar (acierto mínimo de 55% o menos según el paso 2.1).
 - [x] Criterios de éxito y muestra final (de 2025 en adelante), en la sección 5.
 - [x] Costo oficial: el spread de cada época, corregido por la volatilidad del día (16 de noviembre de 2026). El de hoy resultó optimista: el modelo opera en días volátiles, cuando el spread es más del doble (`resultados/costo_historico.md`).
+- [x] Modelo de IA (16 de noviembre de 2026): solo Claude Haiku 5.5 por API, para C y D. Se descartaron los modelos locales (el de 1B tarda ~100 s por noticia en el PC viejo) y los otros tamaños de Claude. Con eso se deja de lado la pregunta de si la ganancia crece con el tamaño del modelo.
 - [x] Horizonte de B (16 de noviembre de 2026): salida a las 15:55, con decisiones de 10:00 a 12:30 y entrada 20 minutos después de cada una (idea 5, variante 12). Pasó la regla de 1,65 y el control del costo en los bordes, fijados antes de medir. Reemplaza al horizonte de 30 y 60 minutos para el modelo de velas; la referencia y la barrera de costos conservan sus horizontes como comparación.
 - [x] Datos de velas en vivo (16 de noviembre de 2026): se prueba primero entrar 20 minutos después del momento de decisión, para poder usar las velas del plan gratuito, que llegan con 15 minutos de retraso (opción c). Se descartó de entrada usar solo las velas de IEX, porque su volumen no coincide con el del entrenamiento. Si la prueba pierde mucho, se paga el plan en tiempo real de Alpaca (99 dólares al mes). Diseño en "Idea 5 con entrada retrasada".
 - [x] Prueba oficial de significancia: remuestreo por bloques de días seguidos (16 de noviembre de 2026), porque los días buenos vienen en racha.
@@ -797,7 +797,7 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama
 | Criterio de éxito | Tasa de acierto (53% contra 50%) | Ganancia neta por operación | A 5 minutos, 53% de acierto no alcanza a pagar los costos |
 | Qué se predice | Si cada acción sube o baja | El orden de las acciones, de mejor a peor | Quita el ruido del mercado general y da más observaciones por día |
 | Referencia | Regla fija o azar | Cuatro efectos documentados | Ganarle al azar no demuestra nada |
-| Escala de la IA | Regresión sobre el número de parámetros | Prueba de tendencia sobre el orden de tamaño | Claude no publica sus parámetros |
+| Escala de la IA | Regresión sobre el número de parámetros | Un solo modelo, Claude Haiku 5.5 (antes, prueba de tendencia sobre cuatro tamaños) | Claude no publica sus parámetros; el modelo local era demasiado lento en el PC viejo y Haiku cuesta unos pocos dólares al mes |
 | Tamaño de muestra | 2.200 operaciones | Por calcular en el paso 2.1 | La cifra era para acierto, que ya no es el criterio |
 | Precios | Ajustados | Sin ajustar, con corrección al leer | Los ajustados cambian con cada split o dividendo nuevo |
 | Fuentes de texto | Ninguna | Noticias de Alpaca y comunicados de la SEC | Es lo que lee la IA |

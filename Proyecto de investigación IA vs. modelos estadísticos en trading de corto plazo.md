@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). Desde el 16 de noviembre de 2026 el costo oficial es el spread de cada época y la prueba oficial usa remuestreo por bloques. Con esas reglas se probó un horizonte hasta las 15:55 (idea 5): da 2,87 bps netos por operación (t 2,30) y no pierde con el costo doble, el mejor resultado hasta ahora, pero no llega al t de 2,61 que exigen las 11 variantes probadas (SPA de Hansen, p = 0,083) y sin 2020 baja a 1,24 bps. Las instrucciones para que la IA lea noticias están diseñadas y programadas con un modelo simulado (paso 2.9). Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). Desde el 16 de noviembre de 2026 el costo oficial es el spread de cada época y la prueba oficial usa remuestreo por bloques. Con esas reglas se probó un horizonte hasta las 15:55 (idea 5): da 2,87 bps netos por operación (t 2,30) y no pierde con el costo doble, el mejor resultado hasta ahora, pero no pasa la corrección por las variantes probadas y sin 2020 baja a 1,24 bps. Para operar con el plan gratuito de datos se probó entrar 20 minutos después de cada decisión: da 3,07 bps (t 2,15). Las dos versiones pasan el control del costo en la apertura y el cierre, y B queda con la entrada retrasada (3,12 bps, t 2,18; con 12 variantes se exige 2,64). Las instrucciones para que la IA lea noticias están diseñadas y programadas con un modelo simulado (paso 2.9). Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -27,7 +27,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 | IA (LLM) | Noticias y comunicados de la empresa | Variables sobre cada noticia: tono, tipo de evento, sorpresa, relevancia |
 | Capa de riesgo | Las predicciones de cualquier competidor | Cuánto apostar en cada operación y cuándo parar |
 
-**El horizonte es de 30 y 60 minutos**, en horario normal de mercado; 15 minutos queda como comparación. Sale de la medición del paso 2.1 (sección 3): a 5 minutos el costo solo deja operar unas 10 acciones, y a 60 minutos deja 39. Sigue siendo corto plazo, pero ya no es una carrera de velocidad, y le da tiempo a un modelo grande de leer la noticia sin llegar tarde.
+**El horizonte es hasta las 15:55**, en horario normal de mercado: el modelo de velas decide cada 30 minutos de 10:00 a 12:30, entra 20 minutos después y sale a las 15:55. Empezó en 30 y 60 minutos, por la medición del paso 2.1 (sección 3): a 5 minutos el costo solo deja operar unas 10 acciones, y a 60 minutos deja 39. Después se vio que el modelo predice una deriva del día y que hasta el cierre la selección pesa más que el costo (idea 5). Sigue siendo corto plazo, pero no es una carrera de velocidad, y le da tiempo a un modelo grande de leer la noticia sin llegar tarde.
 
 **No se opera todo.** Solo una de cada seis noticias va seguida de un movimiento grande. El sistema gana si distingue esas; operar tras cada noticia pierde por costos.
 
@@ -64,7 +64,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | En curso: con el costo de la época, la mejor versión es la de salida a las 15:55 (idea 5), sin significancia corregida; falta el control del costo en la apertura y el cierre | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | En curso: B queda con salida a las 15:55 y entrada 20 minutos después de cada decisión (3,12 bps netos, t por bloques 2,18), sin significancia corregida por las 12 variantes | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -480,6 +480,19 @@ Las funciones de `variables.py` solo usan información anterior al momento de de
 - **Opera menos y depende más de 2020:** 29% menos operaciones; 2020 da 11,69 bps por operación, 2023 da −0,16 y 2024, −2,32 (con 2.147 operaciones). Sin 2020 queda en 0,74 bps (t 0,54).
 - **La entrada de las 10:20 concentra casi todo:** 17.118 operaciones con 4,29 bps netos; las demás suman unas 6.800.
 - **Señal de alerta para la muestra final:** con y sin retraso, 2023 y 2024 son los años más flojos. Si la ventaja se está gastando, 2025 en adelante lo va a mostrar.
+
+**Resultado del control del costo en los bordes** (`costo_bordes.py`, 16 de noviembre de 2026, con las 36 acciones medidas; detalle en `resultados/costo_bordes.md` y `resultados/costo_bordes_retraso20.md`):
+
+- **La apertura es más cara y el cierre más barato que el horario normal.** Razón mediana: 1,11 en la apertura (10:00–10:35) y 0,85 en el cierre (15:45–15:59). La apertura se encarece con los años (1,06 en 2016, 1,24 en 2024) y el cierre se abarata (0,93 a 0,78). Las acciones más caras en la apertura son CRM, HD y CVX (1,4 a 1,5 veces).
+- **Las dos cosas casi se compensan:** el costo medio baja un 3%.
+
+| Versión | Costo de la época | Neta | t por bloques | Costo corregido | Neta | t por bloques | Neta con costo doble |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Idea 5, sin retraso | 2,29 bps | 2,87 | 2,30 | 2,23 bps | 2,93 | 2,35 | 0,69 |
+| Entrada 20 minutos después | 2,15 bps | 3,07 | 2,15 | 2,09 bps | 3,12 | 2,18 | 1,03 |
+
+- **Las dos pasan la regla** (neta positiva con t por bloques ≥ 1,65). Por la regla de la variante 12, **B en vivo es la idea 5 con entrada 20 minutos después**, con el plan gratuito de datos. La versión sin retraso queda como referencia.
+- La salida cerca del cierre no estaba subestimando el costo: el temor de la revisión no se confirmó. Lo que sigue sin resolver es la dependencia de 2020 y la debilidad de 2023 y 2024.
 2. **Una función de variables en vivo** que reproduzca `variables.py` con las velas hasta el momento de decisión: la misma regla de relleno, el mismo tipo de número (float32) y las 50 acciones completas antes de calcular los puestos (`p_*`) y las diferencias con el sector (`s_*`). Se prueba contra la tabla histórica de días pasados.
 3. **Ajustes de precio al día antes de la apertura.** Hoy `descargar_ajustes.py` corre de noche y filtra por fecha de pago; el día de un split o de un dividendo, sin la tabla al día, `ret_noche` y las variables de varios días quedan con un salto falso.
 4. **Guardar el modelo entrenado.** Hoy solo se guardan las predicciones. Falta guardar el LightGBM entrenado con 2016–2024, el orden de las columnas, la codificación del sector y una pendiente de calibración fija, con la regla de qué años la calculan escrita antes de correr.
@@ -751,7 +764,6 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
-- [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos y se probó uno hasta las 15:55 (idea 5). Es el mejor resultado, pero sin significancia corregida. Queda como horizonte de B si sobrevive al control del costo en los bordes, con la regla fijada antes de medir (ver "Revisión contra el sobreajuste de la idea 5").
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 
@@ -761,11 +773,12 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama
 - [x] Precios sin ajustar, con splits, dividendos y escisiones aplicados al leer.
 - [x] La IA lee noticias; los modelos de árboles leen velas.
 - [x] El éxito se mide en ganancia neta, no en acierto.
-- [x] Horizonte: 30 y 60 minutos en horario normal; 15 minutos como comparación.
+- [x] Horizonte: 30 y 60 minutos en horario normal; 15 minutos como comparación. Reemplazada el 16 de noviembre de 2026 para el modelo de velas por la salida a las 15:55 (ver arriba).
 - [x] Lo que sale fuera del horario normal no se opera en el momento; es señal para la apertura siguiente.
 - [x] Se opera solo en las acciones baratas de operar (acierto mínimo de 55% o menos según el paso 2.1).
 - [x] Criterios de éxito y muestra final (de 2025 en adelante), en la sección 5.
 - [x] Costo oficial: el spread de cada época, corregido por la volatilidad del día (16 de noviembre de 2026). El de hoy resultó optimista: el modelo opera en días volátiles, cuando el spread es más del doble (`resultados/costo_historico.md`).
+- [x] Horizonte de B (16 de noviembre de 2026): salida a las 15:55, con decisiones de 10:00 a 12:30 y entrada 20 minutos después de cada una (idea 5, variante 12). Pasó la regla de 1,65 y el control del costo en los bordes, fijados antes de medir. Reemplaza al horizonte de 30 y 60 minutos para el modelo de velas; la referencia y la barrera de costos conservan sus horizontes como comparación.
 - [x] Datos de velas en vivo (16 de noviembre de 2026): se prueba primero entrar 20 minutos después del momento de decisión, para poder usar las velas del plan gratuito, que llegan con 15 minutos de retraso (opción c). Se descartó de entrada usar solo las velas de IEX, porque su volumen no coincide con el del entrenamiento. Si la prueba pierde mucho, se paga el plan en tiempo real de Alpaca (99 dólares al mes). Diseño en "Idea 5 con entrada retrasada".
 - [x] Prueba oficial de significancia: remuestreo por bloques de días seguidos (16 de noviembre de 2026), porque los días buenos vienen en racha.
 - [x] Cómo se entrena D (16 de noviembre de 2026): los primeros meses en la cuenta de papel sirven para ajustar una capa pequeña, con pocos coeficientes, que combina la predicción de B con las seis variables de la IA. La comparación D contra B se hace en los meses siguientes, y la capa se reajusta cada mes solo con lo anterior. Se descartó entrenar con noticias históricas, porque el LLM ya sabe qué pasó después, y una regla fija sin entrenar. Falta fijar cuántos meses dura el ajuste inicial y qué forma tiene la capa.
@@ -777,7 +790,7 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama
 
 | Tema | Versión 1 | Versión actual | Por qué |
 | --- | --- | --- | --- |
-| Horizonte | 5 a 15 minutos | 30 y 60 minutos | A 5 minutos el costo exige acertar el 62% de las veces; a 60, el 54% |
+| Horizonte | 5 a 15 minutos | Hasta las 15:55, con decisiones de 10:00 a 12:30 y entrada 20 minutos después (antes, 30 y 60 minutos) | A 5 minutos el costo exige acertar el 62% de las veces; a 60, el 54%. El modelo predice una deriva del día: hasta el cierre la selección pesa más que el costo; la entrada retrasada permite usar los datos gratuitos |
 | Qué se opera | Todas las acciones, a cualquier hora | Las baratas de operar, en horario normal | Fuera de sesión el costo es entre 6 y 9 veces mayor |
 | Papel de la IA | Competía contra los modelos clásicos con los mismos números | Lee noticias; los árboles leen velas; se suman | Con números puros un LLM no tiene ventaja sobre XGBoost y es mucho más lento y caro |
 | Criterio de éxito | Tasa de acierto (53% contra 50%) | Ganancia neta por operación | A 5 minutos, 53% de acierto no alcanza a pagar los costos |

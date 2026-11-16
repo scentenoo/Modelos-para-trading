@@ -443,14 +443,14 @@ def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float, model
         res = [procesar_noticia(con, modelo, f, horizonte) for _, f in filas.iterrows()]
         n_resp = con.execute("SELECT COUNT(*) FROM respuestas_ia").fetchone()[0]
         n_eval = con.execute("SELECT COUNT(*) FROM evaluaciones_ia").fetchone()[0]
-        lat = pd.read_sql("SELECT latencia_ms, tokens_entrada, tokens_salida, valido, motivo_error FROM respuestas_ia", con)
+        lat = pd.read_sql("SELECT latencia_ms, tokens_entrada, tokens_salida, valido, motivo_error, texto_crudo FROM respuestas_ia", con)
         con.close()
     df = pd.DataFrame(res)
     omitidas = df[df["estado"] == "omitida"]
     enviadas = df[df["estado"] != "omitida"]
     print(f"Noticias de la muestra: {len(df)}  (modelo {modelo.identificador}, prob. inválida {prob_invalida})")
     print(f"Omitidas: {len(omitidas)}")
-    for motivo, c in omitidas["motivo"].value_counts().items():
+    for motivo, c in (omitidas["motivo"].value_counts().items() if len(omitidas) else []):
         print(f"  - {motivo}: {c}")
     if len(enviadas):
         car = enviadas["caracteres"].mean()
@@ -465,9 +465,14 @@ def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float, model
         q = lat["latencia_ms"].quantile([0.5, 0.9]).values / 1000
         print(f"Latencia por intento: mediana {q[0]:.1f} s, 90% {q[1]:.1f} s, máxima {lat['latencia_ms'].max() / 1000:.1f} s; "
               f"tokens medios: entrada {lat['tokens_entrada'].mean():.0f}, salida {lat['tokens_salida'].mean():.0f}")
-        errores = lat.loc[lat["valido"] == 0, "motivo_error"].value_counts().head(5)
-        for motivo, c in errores.items():
+        malas = lat[lat["valido"] == 0]
+        conexion = malas["texto_crudo"].str.startswith("ERROR de conexión")
+        if conexion.any():
+            print(f"  ¡{conexion.sum()} intentos sin conexión con el modelo! Ejemplo: {malas.loc[conexion, 'texto_crudo'].iloc[0][:200]}")
+        for motivo, c in malas.loc[~conexion, "motivo_error"].value_counts().head(5).items():
             print(f"  error: {motivo} ({c})")
+        if (~conexion).any():
+            print(f"  Ejemplo de respuesta inválida: {malas.loc[~conexion, 'texto_crudo'].iloc[0][:300]!r}")
 
 
 def ver(id_noticia: int, horizonte: int) -> None:

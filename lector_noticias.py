@@ -1,7 +1,7 @@
 """
 Base del paso 2.9: arma lo que se le envía a un LLM por cada noticia, valida su
-respuesta JSON y la registra en SQLite. Todavía no hay modelos reales conectados:
-funciona con un modelo simulado y deja la interfaz lista para los reales.
+respuesta JSON y la registra en SQLite. Funciona con un modelo simulado (pruebas)
+y con modelos locales servidos por Ollama; falta Claude por API.
 
 Diseño: "Instrucciones para que la IA lea noticias (paso 2.9), versión 1" en el
 documento del proyecto. Las instrucciones van en inglés y no cambian durante el
@@ -28,6 +28,8 @@ Uso:
     python lector_noticias.py --muestra 200 --mes 2025-03
     python lector_noticias.py --ver 62013450                 # instrucciones y entrada exactas de esa noticia
     python lector_noticias.py --probar                       # pruebas de la validación
+    python lector_noticias.py --muestra 50 --ollama llama3.2:1b                          # Ollama en este equipo
+    python lector_noticias.py --muestra 50 --ollama llama3.2:1b --url http://IP:11434   # Ollama en otro equipo
     --horizonte 60   minutos que entran en las instrucciones (por defecto 60)
 
 Salida:
@@ -54,6 +56,7 @@ import sqlite3
 import sys
 import tempfile
 import time
+import urllib.request
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
@@ -277,11 +280,42 @@ class Modelo:
         raise NotImplementedError
 
 
-# Aquí irían los modelos reales (sin importar paquetes que aún no están instalados):
-#   - ModeloClaude: API de Anthropic (paquete `anthropic`), messages.create con
-#     system=instrucciones, temperature=0, y tokens de response.usage.
-#   - ModeloLocal: modelo pequeño (1-3B) local, por ejemplo con Ollama (servidor HTTP
-#     local) o llama-cpp-python, con temperatura 0 y el mismo texto de instrucciones.
+# Falta ModeloClaude: API de Anthropic (paquete `anthropic`), messages.create con
+# system=instrucciones, temperature=0, y tokens de response.usage.
+
+class ModeloOllama(Modelo):
+    """Modelo local servido por Ollama (API HTTP, por defecto en el puerto 11434).
+    Pide salida JSON (`format: json`), temperatura 0 y semilla fija. Un error de red o
+    de tiempo cuenta como respuesta inválida: se reintenta y, si vuelve a fallar, queda
+    como "sin respuesta"."""
+
+    def __init__(self, modelo: str, url: str = "http://localhost:11434", tiempo_max: float = 120.0):
+        self.nombre, self.url, self.tiempo_max = modelo, url.rstrip("/"), tiempo_max
+        self.identificador = modelo
+        try:      # la versión exacta: el resumen (digest) del modelo descargado
+            etiquetas = self._pedir("/api/tags", None, 10.0)
+            digest = next((m.get("digest", "") for m in etiquetas.get("models", []) if m.get("name") == modelo), "")
+            if digest:
+                self.identificador = f"{modelo}@{digest[:12]}"
+        except Exception:  # noqa: BLE001
+            pass
+
+    def _pedir(self, ruta: str, cuerpo: dict | None, tiempo: float) -> dict:
+        datos = None if cuerpo is None else json.dumps(cuerpo).encode()
+        req = urllib.request.Request(self.url + ruta, data=datos, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=tiempo) as r:
+            return json.loads(r.read().decode())
+
+    def responder(self, instrucciones: str, entrada: str) -> tuple[str, int, int]:
+        cuerpo = {"model": self.nombre, "stream": False, "format": "json",
+                  "options": {"temperature": 0, "seed": 7},
+                  "messages": [{"role": "system", "content": instrucciones}, {"role": "user", "content": entrada}]}
+        try:
+            r = self._pedir("/api/chat", cuerpo, self.tiempo_max)
+        except Exception as e:  # noqa: BLE001
+            return f"ERROR de conexión con Ollama: {e}", 0, 0
+        return r.get("message", {}).get("content", ""), int(r.get("prompt_eval_count", 0)), int(r.get("eval_count", 0))
+
 
 class ModeloSimulado(Modelo):
     """Respuestas deterministas a partir de la noticia. Con `prob_invalida` > 0 a veces
@@ -399,16 +433,17 @@ def cargar_mes(mes: str | None) -> pd.DataFrame:
     return pd.read_parquet(a).drop_duplicates("id")
 
 
-def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float) -> None:
+def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float, modelo: Modelo | None = None) -> None:
     noticias = cargar_mes(mes)
     idx = random.Random(42).sample(range(len(noticias)), min(n, len(noticias)))
     filas = noticias.iloc[idx]
-    modelo = ModeloSimulado(prob_invalida)
+    modelo = modelo or ModeloSimulado(prob_invalida)
     with tempfile.TemporaryDirectory() as carpeta:
         con = abrir_base(Path(carpeta) / "prueba.sqlite")
         res = [procesar_noticia(con, modelo, f, horizonte) for _, f in filas.iterrows()]
         n_resp = con.execute("SELECT COUNT(*) FROM respuestas_ia").fetchone()[0]
         n_eval = con.execute("SELECT COUNT(*) FROM evaluaciones_ia").fetchone()[0]
+        lat = pd.read_sql("SELECT latencia_ms, tokens_entrada, tokens_salida, valido, motivo_error FROM respuestas_ia", con)
         con.close()
     df = pd.DataFrame(res)
     omitidas = df[df["estado"] == "omitida"]
@@ -426,6 +461,13 @@ def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float) -> No
         print(f"Válidas tras reintentar:   {(enviadas['estado'] == 'reintento').sum()}")
         print(f"Sin respuesta:             {(enviadas['estado'] == 'sin_respuesta').sum()}")
     print(f"Filas en la base temporal: respuestas_ia {n_resp}, evaluaciones_ia {n_eval}")
+    if len(lat):
+        q = lat["latencia_ms"].quantile([0.5, 0.9]).values / 1000
+        print(f"Latencia por intento: mediana {q[0]:.1f} s, 90% {q[1]:.1f} s, máxima {lat['latencia_ms'].max() / 1000:.1f} s; "
+              f"tokens medios: entrada {lat['tokens_entrada'].mean():.0f}, salida {lat['tokens_salida'].mean():.0f}")
+        errores = lat.loc[lat["valido"] == 0, "motivo_error"].value_counts().head(5)
+        for motivo, c in errores.items():
+            print(f"  error: {motivo} ({c})")
 
 
 def ver(id_noticia: int, horizonte: int) -> None:
@@ -487,13 +529,15 @@ def main():
     ap.add_argument("--horizonte", type=int, default=HORIZONTE_DEFECTO, help="minutos del horizonte")
     ap.add_argument("--invalidas", type=float, default=0.0, help="prob. de que el simulado responda mal")
     ap.add_argument("--probar", action="store_true", help="ejecuta las pruebas de la validación")
+    ap.add_argument("--ollama", help="modelo de Ollama para --muestra en vez del simulado, por ejemplo llama3.2:1b")
+    ap.add_argument("--url", default="http://localhost:11434", help="dirección del servidor de Ollama")
     a = ap.parse_args()
     if a.probar:
         probar()
     elif a.ver is not None:
         ver(a.ver, a.horizonte)
     elif a.muestra:
-        muestra(a.muestra, a.mes, a.horizonte, a.invalidas)
+        muestra(a.muestra, a.mes, a.horizonte, a.invalidas, ModeloOllama(a.ollama, a.url) if a.ollama else None)
     else:
         ap.print_help()
 

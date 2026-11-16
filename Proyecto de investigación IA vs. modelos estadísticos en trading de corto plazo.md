@@ -107,6 +107,11 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
 - [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
 - [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, los modelos de IA locales y las instrucciones para que la IA lea noticias.
+  - [x] PC viejo con Debian sin entorno gráfico.
+  - [x] Ollama instalado en el PC viejo, con el modelo pequeño `llama3.2:1b` (mil millones de parámetros, cuantizado, ~1,3 GB), sirviendo peticiones por su API local en el puerto 11434.
+  - [x] Instrucciones y formato de respuesta diseñados (versión 1) y `lector_noticias.py` programado, con conexión a Ollama.
+  - [ ] Probar `llama3.2:1b` con noticias históricas en el PC viejo: JSON válido, repetibilidad, latencia (solo formato, nunca acierto).
+  - [ ] Modelo mediano (7–8B) en el portátil y Claude por API (falta la clave).
 
 #### Resultado del paso 2.1
 
@@ -643,7 +648,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `horizonte_largo.py` | Idea 5: modelo de velas con salida a las 15:55, seis decisiones al día y costo de la época; escribe `resultados/horizonte_largo.md`. Con `--rapido` prueba solo 2024 |
 | `recostear_variantes.py` | Guarda las operaciones de las 10 variantes anteriores y de la referencia con el costo de la época (`operaciones_epoca_<h>.parquet`), que usa `comparaciones.py` |
 | `revision_cierre.py` | Revisión contra el sobreajuste de la idea 5: umbral, hora de salida, costo, mercado y concentración; escribe `resultados/revision_cierre.md` |
-| `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Por ahora solo con un modelo simulado |
+| `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Se conecta por HTTP a la API de Ollama (`localhost:11434` u otra dirección con `--url`), pidiendo salida JSON con temperatura 0 y semilla fija; tiene además un modelo simulado para las pruebas. Falta Claude por API |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
@@ -696,7 +701,7 @@ El PC viejo queda como servidor 24/7 en la red local; el portátil hace desarrol
 
 | Componente | Rol | Notas |
 | --- | --- | --- |
-| PC viejo (Debian sin entorno gráfico, \~4 GB) | Descarga datos, guarda, programa tareas, registra decisiones | Debian instalado (noviembre de 2026). Falta: SSH con llaves, IP fija, cable de red si es posible |
+| PC viejo (Debian sin entorno gráfico, \~4 GB) | Descarga datos, guarda, programa tareas, registra decisiones; sirve el modelo de IA pequeño | Debian instalado (noviembre de 2026). Aloja Ollama con `llama3.2:1b` cuantizado (~1,3 GB), dentro del límite de 4 GB de RAM; API local en el puerto 11434. Falta: SSH con llaves, IP fija, cable de red si es posible |
 | Portátil (Celeron N5095, 16 GB) | Desarrollo, entrenamiento de modelos de árboles, modelos locales pequeños | Agregar un segundo módulo DDR4 para doble canal |
 | Claude por API | Lectura de noticias en tiempo real | Se paga aparte del plan Pro |
 | Google Drive | Respaldo nocturno con rclone | No se trabaja directo desde Drive |
@@ -715,9 +720,9 @@ El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo
 - **El PC viejo no descarga el histórico.** Baja solo el año en curso (unos 8 minutos), que alcanza para las variables que miran hacia atrás, como la volatilidad de los últimos 20 días.
 - **Reentrenamiento:** cada mes o cada trimestre, en el portátil. Se le copian los datos nuevos que acumuló el PC viejo, se reentrena y se devuelve el archivo del modelo.
 - **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
-- **Modelos de IA locales:** uno mediano (7–8B) no cabe en los 4 GB del PC viejo. O corre en el portátil, o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
+- **Modelos de IA locales:** el pequeño (`llama3.2:1b`) corre en el PC viejo con Ollama. Uno mediano (7–8B) no cabe en sus 4 GB: o corre en el portátil, o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
 
-El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Lo siguiente es instalar los modelos de IA pequeños (paso 2.9).
+El PC viejo ya tiene Debian instalado, sin entorno gráfico, y Ollama con `llama3.2:1b` (noviembre de 2026). Lo siguiente es probar ese modelo con `lector_noticias.py` y configurar SSH con llaves e IP fija.
 
 ## 9. Reglas y decisiones
 

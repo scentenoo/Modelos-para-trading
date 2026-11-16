@@ -58,9 +58,12 @@ def volatilidad_diaria() -> pd.DataFrame:
     return pd.DataFrame(np.where(rv > 0, rv, np.nan), index=pd.DatetimeIndex(p["dias"]), columns=UNIVERSO)
 
 
-def spreads_por_trimestre(rv: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
-    """Spread (bps) y volatilidad de referencia por símbolo y trimestre, las muestras, y la elasticidad del spread a la volatilidad."""
-    t = pd.concat([pd.read_parquet(a) for a in sorted(HISTORICO.glob("*.parquet"))], ignore_index=True)
+def spreads_por_trimestre(rv: pd.DataFrame, carpeta=HISTORICO) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """Spread (bps) y volatilidad de referencia por símbolo y trimestre, las muestras, y la elasticidad del spread a la volatilidad.
+
+    carpeta: de dónde salen las muestras (por defecto datos/spread_historico; muestra_final.py usa también datos/spread_reciente).
+    """
+    t = pd.concat([pd.read_parquet(a) for a in sorted(carpeta.glob("*.parquet"))], ignore_index=True)
     local = t["momento"].dt.tz_convert("America/New_York").dt.tz_localize(None)
     t["trimestre"], t["anio"], t["dia"] = local.dt.to_period("Q"), local.dt.year, local.dt.normalize()
     t = t[t["anio"] >= 2016]      # el archivo de velas de 2016 trae la tarde del 31 de diciembre de 2015

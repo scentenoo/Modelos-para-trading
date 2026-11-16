@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1) las variables están construidas (paso 2.2) y la referencia está programada (paso 2.5); sigue entrenar el modelo de velas (paso 2.6). Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5) y hay una primera versión del modelo de velas (paso 2.6): tiene señal, pero todavía no paga los costos. La segunda versión está escrita y falta correrla. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -64,7 +64,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | En curso: costos medidos, variables y referencia listas | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | En curso: primera versión del modelo de velas, que aún no paga los costos | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -98,7 +98,11 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [ ] 2.3 **Segmentar las acciones:** PCA sobre los retornos, clustering jerárquico sobre la distancia de correlación, y K-means o mezclas gaussianas sobre las variables.
 - [ ] 2.4 **Segmentar el tiempo en regímenes:** calma, pánico, tendencia, lateralidad. Modelo oculto de Markov o mezcla gaussiana sobre la volatilidad.
 - [x] 2.5 **Programar la referencia (competidor A):** `referencia.py` aplica los cuatro efectos documentados con reglas fijas; el detalle está en `resultados/referencia.md`. Ver el resumen abajo.
-- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
+- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** primera versión hecha con `modelo_velas.py` (ver el resumen abajo); falta una versión que pague los costos. Plan de mejora, en este orden:
+  - [ ] 2.6.a **Variables comparativas:** el puesto de cada acción frente a las demás en ese momento (retornos, volumen, volatilidad) y su retorno frente al promedio de su sector. El modelo predice un orden, y hasta ahora casi todas sus variables eran de la acción sola.
+  - [ ] 2.6.b **Búsqueda de hiperparámetros dentro de cada entrenamiento:** para cada año de prueba se eligen con el último año anterior, nunca con el año de prueba, así que no suma variantes por combinación. La idea sale del taller de tidymodels de Freddy Hernández, cambiando la validación cruzada al azar por una que respeta el tiempo.
+  - [ ] 2.6.c Segmentación y regímenes (pasos 2.3 y 2.4): la diferencia entre 2020 y 2023 sugiere que el régimen importa.
+  - 2.6.a y 2.6.b se prueban juntas como segunda versión, para gastar una sola variante por horizonte. Estado al 15 de noviembre de 2026: ya está escrita en `modelo_velas.py`, pero falta correrla; la corrida completa tarda de una a dos horas en el portátil. XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
 - [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
 - [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, los modelos de IA locales y las instrucciones para que la IA lea noticias.
@@ -139,6 +143,22 @@ Ganancia por operación de la referencia en 2016–2024 (sin la muestra final), 
 - Las reglas son las versiones más simples de cada efecto, fijadas de antemano. No se afinaron para que ganen, porque eso sería ajustar la referencia a los datos.
 
 Límites: el costo usa el spread de los últimos 60 días para toda la historia, y la deriva es una versión dentro del día de un efecto que se documentó a varios días.
+
+#### Resultado del paso 2.6, primera versión
+
+Validación hacia adelante de 2019 a 2024 (cada año se predice con un modelo entrenado con los anteriores), sin la muestra final. LightGBM con parámetros fijados de antemano; opera solo cuando la ganancia esperada supera el costo. El detalle está en `resultados/modelo_velas.md`.
+
+| Horizonte | Operaciones | Acierto | Ganancia bruta | Costo | Ganancia neta | t | Neta con costo doble |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 30 min (23 acciones) | 36.414 | 51,6% | 1,76 bps | 1,44 bps | 0,32 bps | 0,56 | −1,12 bps |
+| 60 min (36 acciones) | 31.147 | 51,3% | 2,93 bps | 1,68 bps | 1,25 bps | 1,29 | −0,44 bps |
+
+- **El modelo sí ordena las acciones mejor que el azar,** y eso no es casualidad (t de 10 a 11 sobre la correlación entre el orden predicho y el real). La referencia no tenía ninguna señal.
+- **La señal es pequeña frente al costo.** La décima parte de las predicciones más fuertes acierta por 1,1 a 1,8 bps, y operar cuesta entre 1,4 y 1,7.
+- **La ganancia neta no se distingue de cero** (t menor que 2) y es negativa con el costo doble. A 60 minutos casi todo viene de 2020; en 2019 y 2023 pierde.
+- **Con este resultado no pasaría los criterios** de la sección 5.
+- La regresión logística, la base simple, opera muy poco y no gana.
+- Variantes probadas hasta ahora: 4 (dos modelos por dos horizontes).
 
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
@@ -293,6 +313,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `barrera_costos.py` | Compara el movimiento del precio con el costo y calcula el acierto mínimo; escribe `resultados/barrera_costos.md` |
 | `variables.py` | Arma la tabla de variables y retornos futuros para los modelos, sin usar información del futuro |
 | `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
+| `modelo_velas.py` | Entrena el modelo de velas (competidor B) con validación hacia adelante y lo compara con la referencia; escribe `resultados/modelo_velas.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 
 ### Habilidades instaladas en `.claude/skills/`
@@ -329,6 +350,7 @@ No se instalaron porque dependen de otra fuente de datos o de otro horizonte; se
 | Leer los comunicados 8-K y las cifras de resultados directo de la SEC | day-trader-skill | Pasos 1.7 y 1.8 |
 | Límites por operación y por día, y cierre a las 3:55 p. m. | day-trader-skill | Capa de riesgo |
 | Orden con aprobación manual | day-trader-skill | Paso 4.3 |
+| Buscar hiperparámetros con remuestreo y calcular el preprocesamiento solo con el entrenamiento | [Taller de tidymodels](https://freddy-hb-tidymodels-latinr.share.connect.posit.cloud/) de Freddy Hernández (R) | Paso 2.6; se reescribe en Python y con validación hacia adelante en vez de pliegues al azar |
 
 ### Revisado y descartado
 

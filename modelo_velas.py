@@ -166,7 +166,8 @@ def operar(pred: pd.DataFrame, modelo: str, h: int, costo: pd.Series, operable: 
 def orden_acertado(pred: pd.DataFrame, modelo: str) -> tuple[float, float]:
     """Correlación de rangos entre lo predicho y lo ocurrido en cada momento: promedio y estadístico t por día."""
     por_momento = correlacion_de_rangos(pred[modelo].values, pred["rel_bps"].values, pred["momento"].values)
-    por_dia = por_momento.groupby(pred.drop_duplicates("momento").set_index("momento")["dia"]).mean().dropna()
+    dia = pd.Series(pred["dia"].values, index=pred["momento"].values).groupby(level=0).first()   # mismo índice que por_momento
+    por_dia = por_momento.groupby(dia.reindex(por_momento.index).values).mean().dropna()
     return por_dia.mean(), por_dia.mean() / (por_dia.std(ddof=1) / np.sqrt(len(por_dia)))
 
 

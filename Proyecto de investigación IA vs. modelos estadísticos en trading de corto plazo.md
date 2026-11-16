@@ -1,6 +1,6 @@
 # IA para noticias + modelos estadísticos en trading de corto plazo
 
-Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de 2026
+Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de 2026
 
 ## 1. Resumen
 
@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5) y hay una primera versión del modelo de velas (paso 2.6): tiene señal, pero todavía no paga los costos. La segunda versión está escrita y falta correrla. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Lo siguiente es calibrar la predicción antes de compararla con el costo. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -64,7 +64,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | En curso: primera versión del modelo de velas, que aún no paga los costos | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | En curso: dos versiones del modelo de velas, que aún no pagan los costos | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -95,14 +95,15 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 
 - [x] 2.1 **Medir la barrera de costos.** Hecho con `muestrear_spread.py` y `barrera_costos.py`; el detalle por acción está en `resultados/barrera_costos.md`. Ver el resumen abajo.
 - [x] 2.2 **Variables por acción:** `variables.py` arma una fila por acción cada 15 minutos en horario normal: 3,6 millones de filas y 41 columnas en `datos/variables` (retornos pasados, volatilidad, posición en el rango del día, volumen relativo, beta, retornos sin la parte del mercado, conteo de noticias, sector y los retornos futuros a 15, 30 y 60 minutos). Se comprobó con 1.800 pruebas que ninguna variable usa información posterior al momento de decisión.
-- [ ] 2.3 **Segmentar las acciones:** PCA sobre los retornos, clustering jerárquico sobre la distancia de correlación, y K-means o mezclas gaussianas sobre las variables.
-- [ ] 2.4 **Segmentar el tiempo en regímenes:** calma, pánico, tendencia, lateralidad. Modelo oculto de Markov o mezcla gaussiana sobre la volatilidad.
+- [x] 2.3 **Segmentar las acciones:** hecho con `segmentos.py`: PCA sobre los retornos y clustering jerárquico sobre la correlación, y K-means sobre las características de cada acción. Ver el resumen abajo.
+- [x] 2.4 **Segmentar el tiempo en regímenes:** hecho con `segmentos.py`: mezcla gaussiana sobre volatilidad, tendencia y dispersión, con rasgos conocidos antes de la apertura. No se usa un modelo oculto de Markov, porque sus estados suavizados miran el futuro. Ver el resumen abajo.
 - [x] 2.5 **Programar la referencia (competidor A):** `referencia.py` aplica los cuatro efectos documentados con reglas fijas; el detalle está en `resultados/referencia.md`. Ver el resumen abajo.
-- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** primera versión hecha con `modelo_velas.py` (ver el resumen abajo); falta una versión que pague los costos. Plan de mejora, en este orden:
-  - [ ] 2.6.a **Variables comparativas:** el puesto de cada acción frente a las demás en ese momento (retornos, volumen, volatilidad) y su retorno frente al promedio de su sector. El modelo predice un orden, y hasta ahora casi todas sus variables eran de la acción sola.
-  - [ ] 2.6.b **Búsqueda de hiperparámetros dentro de cada entrenamiento:** para cada año de prueba se eligen con el último año anterior, nunca con el año de prueba, así que no suma variantes por combinación. La idea sale del taller de tidymodels de Freddy Hernández, cambiando la validación cruzada al azar por una que respeta el tiempo.
-  - [ ] 2.6.c Segmentación y regímenes (pasos 2.3 y 2.4): la diferencia entre 2020 y 2023 sugiere que el régimen importa.
-  - 2.6.a y 2.6.b se prueban juntas como segunda versión, para gastar una sola variante por horizonte. Estado al 15 de noviembre de 2026: ya está escrita en `modelo_velas.py`, pero falta correrla; la corrida completa tarda de una a dos horas en el portátil. XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
+- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** dos versiones hechas con `modelo_velas.py` (ver los resúmenes abajo); falta una versión que pague los costos. Plan de mejora, en este orden:
+  - [x] 2.6.a **Variables comparativas:** el puesto de cada acción frente a las demás en ese momento (retornos, volumen, volatilidad) y su retorno frente al promedio de su sector. El modelo predice un orden, y hasta ahora casi todas sus variables eran de la acción sola.
+  - [x] 2.6.b **Búsqueda de hiperparámetros dentro de cada entrenamiento:** para cada año de prueba se eligen con el último año anterior, nunca con el año de prueba, así que no suma variantes por combinación. La idea sale del taller de tidymodels de Freddy Hernández, cambiando la validación cruzada al azar por una que respeta el tiempo.
+  - [ ] 2.6.c **Calibrar la predicción:** el modelo exagera (en la décima más fuerte predice cerca del doble de lo que ocurre), así que el filtro de costo deja pasar operaciones que no pagan. Se corrige con años anteriores al de prueba. Reutiliza las predicciones guardadas, sin reentrenar.
+  - [ ] 2.6.d Grupos y regímenes como variables (pasos 2.3 y 2.4). Baja de prioridad: el diagnóstico mostró que la señal está en los cuatro regímenes.
+  - 2.6.a y 2.6.b se probaron juntas como segunda versión, para gastar una sola variante por horizonte; la corrida completa tarda unos 80 minutos en el portátil. XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
 - [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
 - [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, los modelos de IA locales y las instrucciones para que la IA lea noticias.
@@ -159,6 +160,35 @@ Validación hacia adelante de 2019 a 2024 (cada año se predice con un modelo en
 - **Con este resultado no pasaría los criterios** de la sección 5.
 - La regresión logística, la base simple, opera muy poco y no gana.
 - Variantes probadas hasta ahora: 4 (dos modelos por dos horizontes).
+
+#### Resultado del paso 2.6, segunda versión
+
+Misma validación, con variables comparativas y búsqueda de hiperparámetros (16 de noviembre de 2026).
+
+| Horizonte | Versión | Correlación de rangos (t) | Operaciones | Ganancia neta | t | Neta con costo doble |
+| --- | --- | --- | --- | --- | --- | --- |
+| 30 min | Primera | 0,0170 (11,09) | 36.414 | 0,32 bps | 0,56 | −1,12 bps |
+| 30 min | Segunda | 0,0190 (13,30) | 49.056 | 0,31 bps | 0,72 | −1,21 bps |
+| 60 min | Primera | 0,0198 (9,52) | 31.147 | 1,25 bps | 1,29 | −0,44 bps |
+| 60 min | Segunda | 0,0218 (10,99) | 51.847 | 0,99 bps | 1,63 | −0,90 bps |
+
+- **Ordena un poco mejor** (la correlación de rangos sube cerca de un 10%), **pero no gana más:** opera entre 35% y 66% más con casi la misma ganancia por operación.
+- **Sigue sin pasar los criterios** de la sección 5: t menor que 2 y ganancia negativa con el costo doble.
+- **Depende menos de 2020:** a 60 minutos ese año baja de 8,22 a 4,38 bps. En 2019, 2022 y 2023 sigue perdiendo.
+- **Exagera más que la primera:** en la décima más fuerte a 60 minutos predice 3,75 bps y lo real es 1,79.
+- **La búsqueda casi siempre elige el máximo** (500 árboles): la rejilla se queda corta por arriba.
+- Variantes probadas hasta ahora: 6 (tres modelos por dos horizontes).
+
+#### Resultado de los pasos 2.3 y 2.4
+
+Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
+
+- **Grupos por correlación: débiles e inestables.** Silueta de 0,09 a 0,12 y entre 4 y 10 grupos según el año. No se usan.
+- **Grupos por características** (volatilidad, monto, beta, noticias): más claros, con silueta de 0,38 a 0,42 y 4 o 5 grupos. En 2024: defensivas, cíclicas, tecnológicas volátiles, las cuatro gigantes y TSLA sola.
+- **Regímenes:** el BIC elige cuatro en todas las ventanas. Dos son de volatilidad baja y dos de volatilidad alta; a estos los separan la tendencia y si la volatilidad sube o cede.
+- **La señal de la primera versión está en los cuatro regímenes** (t de 3 a 7); lo que cambia es si alcanza a pagar el costo. A 60 minutos gana en el régimen volátil que cede (7,35 bps, t 2,31) y pierde en el volátil que cae (−2,98 bps, t −2,45). El primero es sobre todo 2020.
+- **No da para una regla:** con ocho casillas, un t de 2,3 no es evidencia fuerte, y operar solo en los regímenes buenos sería una variante nueva.
+- **Las operaciones están concentradas** en las tecnológicas volátiles: a 30 minutos, 15.737 de 36.414.
 
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
@@ -314,6 +344,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `variables.py` | Arma la tabla de variables y retornos futuros para los modelos, sin usar información del futuro |
 | `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
 | `modelo_velas.py` | Entrena el modelo de velas (competidor B) con validación hacia adelante y lo compara con la referencia; escribe `resultados/modelo_velas.md` |
+| `segmentos.py` | Calcula los grupos de acciones y los regímenes de mercado por ventana de validación, y mide si la señal del modelo de velas cambia según el segmento; escribe `resultados/segmentos.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 
 ### Habilidades instaladas en `.claude/skills/`
@@ -399,8 +430,8 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 ### Decisiones abiertas
 
 - [ ] Capital máximo de riesgo.
-- [ ] Bróker definitivo (Alpaca o Interactive Brokers), confirmando que acepte residentes en Colombia.
-- [ ] Regla de "pattern day trader" de EE. UU.: el repositorio day-trader-skill afirma que FINRA eliminó el mínimo de 25.000 dólares en junio de 2026 (aviso 26-10) y que los brókers tienen hasta octubre de 2027 para aplicarlo. Confirmar con FINRA y con Alpaca antes de darlo por hecho.
+- [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
+- [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 
@@ -416,6 +447,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [x] Criterios de éxito y muestra final (de 2025 en adelante), en la sección 5.
 - [x] El portátil entrena y el PC viejo opera.
 - [x] El PC viejo y los modelos de IA se configuran al final.
+- [x] Regla de "pattern day trader": el [aviso 26-10 de FINRA](https://www.finra.org/rules-guidance/notices/26-10) eliminó el conteo de operaciones y el mínimo de 25.000 dólares desde el 4 de junio de 2026. Los brókers pueden aplicarlo por etapas hasta el 20 de octubre de 2027. Queda el piso general de 2.000 dólares de una cuenta de margen.
 
 ## 10. Historial de cambios
 

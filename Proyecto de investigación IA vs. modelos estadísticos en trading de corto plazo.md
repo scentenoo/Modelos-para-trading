@@ -335,6 +335,11 @@ Hecha con `revision_cierre.py` el 16 de noviembre de 2026, sobre lo guardado por
 - **No es exposición al mercado,** pero sí depende de pocos días (marzo de 2020 y febrero de 2022) y de las acciones más volátiles.
 - **Conclusión:** la idea 5 es la mejor base para B y su señal es real (la selección tiene t 4,73), pero el margen después de costos es fino: con un costo 50% mayor el t baja a 1,40. Antes de la muestra final hace falta saber cuánto cuesta salir a las 15:55.
 
+**Control del costo en los bordes, regla fijada el 16 de noviembre de 2026 antes de medir.** `muestrear_spread.py --bordes` mide el spread de las 36 acciones de 2016 a 2024 en la apertura (10:00–10:35, donde entra el 70% de las operaciones) y en el cierre (15:45–15:59, donde salen), con 4 momentos por franja y trimestre.
+- **Costo corregido:** cada operación paga medio spread al entrar y medio al salir. Cada mitad es el costo de la época de esa acción (horario normal, trimestre en curso, volatilidad del día) multiplicado por la razón de su franja: la mediana, entre las muestras de esa acción en esa franja, del spread medido dividido por el de horario normal de su trimestre corregido por la volatilidad de su día.
+- **Mismas operaciones:** la regla de entrada no cambia, solo lo que se paga. No suma variantes.
+- **Decisión del horizonte:** si con el costo corregido la ganancia neta sigue positiva con t por bloques de al menos 1,65 (5% de una cola, sin corregir), la salida a las 15:55 queda como horizonte de B. Si no, no se elige otra hora mirando estos resultados: salir antes (por ejemplo, a las 15:25) sería una variante nueva, la 12.ª, con su propia prueba.
+
 #### Resultado de los pasos 2.3 y 2.4
 
 Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
@@ -431,7 +436,7 @@ Diseño del 16 de noviembre de 2026. Las instrucciones y el formato se fijan ant
 
 **Qué se puede hacer con el histórico de noticias:** comprobar que las respuestas son JSON válido, que se repiten igual con la misma noticia, cuánto tardan y cuánto cuestan. Nunca medir si aciertan (sección 2, "Regla sobre la IA y el pasado").
 
-**Problema abierto: cómo se entrena D.** D necesita aprender cuánto pesan las variables de la IA, pero no hay historia limpia de esas variables: con noticias viejas el LLM ya sabe qué pasó. Ver "Decisiones abiertas".
+**Cómo se entrena D:** no hay historia limpia de las variables de la IA (con noticias viejas el LLM ya sabe qué pasó), así que D se ajusta en vivo: los primeros meses en la cuenta de papel ajustan una capa pequeña que combina la predicción de B con las seis variables, y D contra B se compara en los meses siguientes. Ver "Decisiones cerradas".
 
 ### Fase 3 · Experimento en vivo (cuenta de papel)
 
@@ -683,8 +688,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
-- [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos y se probó uno hasta las 15:55 (idea 5). Es el mejor resultado, pero sin significancia corregida. Falta decidir si pasa a ser el horizonte del modelo de velas.
-- [ ] Cómo se entrena D sin historia limpia de las variables de la IA. Opciones: (a) una regla fija escrita antes de empezar, sin entrenar; (b) los primeros meses en vivo sirven para ajustar una capa pequeña, que combina la predicción de B con las seis variables de la IA y tiene pocos coeficientes; la comparación D contra B se hace en los meses siguientes, reajustando cada mes con lo anterior; (c) entrenar con noticias históricas, lo que está contaminado y se descarta. Propuesta: (b).
+- [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos y se probó uno hasta las 15:55 (idea 5). Es el mejor resultado, pero sin significancia corregida. Queda como horizonte de B si sobrevive al control del costo en los bordes, con la regla fijada antes de medir (ver "Revisión contra el sobreajuste de la idea 5").
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 
@@ -700,6 +704,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [x] Criterios de éxito y muestra final (de 2025 en adelante), en la sección 5.
 - [x] Costo oficial: el spread de cada época, corregido por la volatilidad del día (16 de noviembre de 2026). El de hoy resultó optimista: el modelo opera en días volátiles, cuando el spread es más del doble (`resultados/costo_historico.md`).
 - [x] Prueba oficial de significancia: remuestreo por bloques de días seguidos (16 de noviembre de 2026), porque los días buenos vienen en racha.
+- [x] Cómo se entrena D (16 de noviembre de 2026): los primeros meses en la cuenta de papel sirven para ajustar una capa pequeña, con pocos coeficientes, que combina la predicción de B con las seis variables de la IA. La comparación D contra B se hace en los meses siguientes, y la capa se reajusta cada mes solo con lo anterior. Se descartó entrenar con noticias históricas, porque el LLM ya sabe qué pasó después, y una regla fija sin entrenar. Falta fijar cuántos meses dura el ajuste inicial y qué forma tiene la capa.
 - [x] El portátil entrena y el PC viejo opera.
 - [x] El PC viejo y los modelos de IA se configuran al final.
 - [x] Regla de "pattern day trader": el [aviso 26-10 de FINRA](https://www.finra.org/rules-guidance/notices/26-10) eliminó el conteo de operaciones y el mínimo de 25.000 dólares desde el 4 de junio de 2026. Los brókers pueden aplicarlo por etapas hasta el 20 de octubre de 2027. Queda el piso general de 2.000 dólares de una cuenta de margen.

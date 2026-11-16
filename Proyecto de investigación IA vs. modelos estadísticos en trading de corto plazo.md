@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Lo siguiente es calibrar la predicción antes de compararla con el costo. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. La calibración de la predicción (paso 2.6.c) ya se corrió y su resultado está por revisar. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -101,7 +101,7 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [ ] 2.6 **Entrenar los modelos de velas (competidor B):** dos versiones hechas con `modelo_velas.py` (ver los resúmenes abajo); falta una versión que pague los costos. Plan de mejora, en este orden:
   - [x] 2.6.a **Variables comparativas:** el puesto de cada acción frente a las demás en ese momento (retornos, volumen, volatilidad) y su retorno frente al promedio de su sector. El modelo predice un orden, y hasta ahora casi todas sus variables eran de la acción sola.
   - [x] 2.6.b **Búsqueda de hiperparámetros dentro de cada entrenamiento:** para cada año de prueba se eligen con el último año anterior, nunca con el año de prueba, así que no suma variantes por combinación. La idea sale del taller de tidymodels de Freddy Hernández, cambiando la validación cruzada al azar por una que respeta el tiempo.
-  - [ ] 2.6.c **Calibrar la predicción:** el modelo exagera (en la décima más fuerte predice cerca del doble de lo que ocurre), así que el filtro de costo deja pasar operaciones que no pagan. Se corrige con años anteriores al de prueba. Reutiliza las predicciones guardadas, sin reentrenar.
+  - [ ] 2.6.c **Calibrar la predicción:** el modelo exagera (en la décima más fuerte predice cerca del doble de lo que ocurre), así que el filtro de costo deja pasar operaciones que no pagan. Se corrige con años anteriores al de prueba. Reutiliza las predicciones guardadas, sin reentrenar. Estado al 16 de noviembre de 2026: `calibracion.py` está escrito y se corrió antes de tiempo; el resultado está en `resultados/calibracion.md` y falta revisarlo. La regla de calibración se fijó antes de correr. Ya cuenta como una variante por horizonte: con ella van 8 variantes probadas.
   - [ ] 2.6.d Grupos y regímenes como variables (pasos 2.3 y 2.4). Baja de prioridad: el diagnóstico mostró que la señal está en los cuatro regímenes.
   - 2.6.a y 2.6.b se probaron juntas como segunda versión, para gastar una sola variante por horizonte; la corrida completa tarda unos 80 minutos en el portátil. XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
@@ -190,6 +190,36 @@ Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El
 - **No da para una regla:** con ocho casillas, un t de 2,3 no es evidencia fuerte, y operar solo en los regímenes buenos sería una variante nueva.
 - **Las operaciones están concentradas** en las tecnológicas volátiles: a 30 minutos, 15.737 de 36.414.
 
+#### Ideas en reserva para el modelo de velas
+
+Anotadas el 16 de noviembre de 2026. Están diseñadas pero no programadas ni corridas, así que no cuentan como variantes. Se retoman después de revisar la calibración (2.6.c), en este orden.
+
+| Idea | Qué es | Qué existe ya | Costo | Variantes que suma |
+| --- | --- | --- | --- | --- |
+| 1 · Filtro de operaciones (meta-labeling) | Un segundo modelo decide si se opera; el primero solo da la dirección | Las predicciones fuera de muestra del primero y los regímenes | Bajo: no reentrena el primero, salvo un año | 2 |
+| 2 · Objetivo sin mercado ni sector | El primero predice el retorno sin la parte de SPY (con la beta de cada acción) y sin la de su sector | El objetivo ya descuenta el promedio de las 50 acciones; `beta_60d` | Una corrida completa (80 minutos) | 2, junto con la idea 3 |
+| 3 · Reacción a la noticia | Variables de cuánto se movió el precio y el volumen desde la última noticia o comunicado 8-K | Conteos de noticias, `volrel_15`, hora exacta de los 8-K | Rehacer `variables.py` y la misma corrida de la idea 2 | — |
+| 4 · Sorpresa contable | Cambio de ingresos y ganancia por acción frente al mismo trimestre del año anterior | Cifras de la SEC | Aplazada: ver abajo | — |
+
+**Diseño del filtro de operaciones (idea 1)**
+
+- **Filas:** solo las operaciones candidatas (acciones operables en los momentos de decisión de cada horizonte).
+- **Etiqueta:** 1 si el retorno en la dirección del primero supera 2 veces el spread. Se fija en 2 y no se prueba 1,5: coincide con el criterio de no perder con el costo doble.
+- **Variables:** la predicción del primero (valor, valor absoluto, puesto entre las acciones de ese momento y tamaño frente al spread), el movimiento esperado frente al spread, el minuto del día, `volrel_15`, `not_60m`, la volatilidad de SPY, el régimen, el grupo por características y `vol_20d`.
+- **Para cada año de prueba A:** el filtro se entrena con las predicciones de los años de prueba hasta A−2; con el año A−1 se calibra la probabilidad y se elige el umbral (el de mayor ganancia neta con costo doble, entre cinco valores fijos y con un mínimo de 1.500 operaciones); se opera el año A.
+- **Años de prueba:** 2021–2024 con lo guardado. Para incluir 2020 hay que agregar un entrenamiento del primero para 2018, con solo dos años de historia. Se reportan los dos periodos, porque 2020 pesa mucho.
+- **Base de comparación:** la calibración (2.6.c) es el caso más simple de este filtro. Si el filtro no le gana, no se justifica.
+- **Tamaño de posición:** la probabilidad sola no alcanza para Kelly; se guarda también la ganancia y la pérdida media por tramo de probabilidad.
+- **Advertencia:** el movimiento típico a 30 minutos (unos 22 bps) es mucho mayor que el spread (1,5 bps), así que la etiqueta casi equivale a "acertó la dirección". Lo que el filtro puede aportar es elegir los momentos en que el mismo acierto vale más.
+
+**Notas de las otras ideas**
+
+- **Idea 2:** el promedio del sector debe excluir a la propia acción, porque hay sectores de tres acciones y uno de una (LIN). Se espera poca mejora: el promedio de las 50 ya quita casi todo el mercado. La ganancia se sigue midiendo con el retorno sin cobertura, como dicen los criterios.
+- **Idea 3:** variables continuas (retorno desde la noticia frente a la volatilidad esperada, volumen relativo desde la noticia, minutos desde el último 8-K), sin cortes fijos; el árbol los encuentra.
+- **Idea 4, aplazada:** las cifras estructuradas llegan tarde (ver "Limitaciones anotadas" en la sección 4). Solo serviría como variable de varios días a partir del informe trimestral, no como señal de minutos.
+
+Con las ideas 1 a 3 el total llegaría a 12 variantes. Con Bonferroni, eso sube el t exigido de 2,50 (8 variantes) a 2,64.
+
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
 Regla anti-anticipación: los grupos y regímenes se recalculan en cada ventana de la validación hacia adelante, solo con datos del pasado.
@@ -255,7 +285,7 @@ La mitad de las noticias sale con el mercado abierto, que es donde se puede oper
 
 ### Para qué la SEC
 
-Un comunicado 8-K suele salir antes que la nota de prensa que lo resume, así que le da a la IA el texto original y más temprano. Con las cifras de resultados, la "sorpresa" de un trimestre se calcula con números en vez de pedírsela a la IA. La SEC solo trae lo que la empresa reportó, no lo que esperaban los analistas (ese dato es de pago), así que la sorpresa se mide contra el mismo trimestre del año anterior.
+Un comunicado 8-K suele salir antes que la nota de prensa que lo resume, así que le da a la IA el texto original y más temprano. Con las cifras de resultados, la "sorpresa" de un trimestre se calcula con números en vez de pedírsela a la IA, aunque esas cifras llegan varios días después del comunicado (ver "Limitaciones anotadas"). La SEC solo trae lo que la empresa reportó, no lo que esperaban los analistas (ese dato es de pago), así que la sorpresa se mide contra el mismo trimestre del año anterior.
 
 Cada comunicado trae la hora exacta en que quedó público (verificada en UTC) y el tema que trata; el tema 2.02 marca los resultados trimestrales.
 
@@ -263,6 +293,8 @@ Cada comunicado trae la hora exacta en que quedó público (verificada en UTC) y
 
 - **Sesgo de supervivencia:** el universo son empresas que existen hoy.
 - **LIN** tiene datos solo desde 2018, cuando empezó a cotizar con ese símbolo.
+- **Las cifras de la SEC llegan después del comunicado de resultados.** Vienen del informe trimestral (10-Q o 10-K), no del 8-K. De 1.893 comunicados de resultados de 2016 a 2024, solo en el 20% las cifras estaban disponibles ese mismo día; la mediana es 7 días después. Usarlas el día del comunicado sería usar información del futuro. Visa no reporta ganancia por acción en estos datos.
+- **No hay spread histórico:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo para toda la historia. Para tenerlo por año habría que muestrear cotizaciones de cada año con `muestrear_spread.py`.
 - **Empresas reorganizadas:** Exxon (2026), Disney (2019) y Broadcom (2018) pasaron a una sociedad nueva y la SEC les dio otro número de registro. `descargar_sec.py` tiene una tabla con los registros anteriores; si otra empresa se reorganiza, hay que agregarla ahí.
 
 ### Pagos opcionales
@@ -345,6 +377,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
 | `modelo_velas.py` | Entrena el modelo de velas (competidor B) con validación hacia adelante y lo compara con la referencia; escribe `resultados/modelo_velas.md` |
 | `segmentos.py` | Calcula los grupos de acciones y los regímenes de mercado por ventana de validación, y mide si la señal del modelo de velas cambia según el segmento; escribe `resultados/segmentos.md` |
+| `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 
 ### Habilidades instaladas en `.claude/skills/`

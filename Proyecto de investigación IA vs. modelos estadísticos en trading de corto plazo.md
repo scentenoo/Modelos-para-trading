@@ -449,6 +449,19 @@ Diseño del 16 de noviembre de 2026. Las instrucciones y el formato se fijan ant
 
 Horario del mercado en Colombia: 9:30 a. m.–4:00 p. m. en invierno de EE. UU.; una hora antes desde marzo.
 
+#### Qué falta para calcular las variables en vivo (revisión del paso 3.1, 16 de noviembre de 2026)
+
+Las funciones de `variables.py` solo usan información anterior al momento de decisión, pero todo se calcula por lotes con el histórico completo. Para operar en vivo falta, en orden de importancia:
+
+1. **Datos a tiempo.** Las velas del mercado completo (SIP) del plan gratuito llegan con 15 minutos de retraso, y `descargar_datos.py` deja 20 de margen: a las 10:00 solo hay velas hasta cerca de las 9:40, y el modelo se entrenó con la de las 9:59. Ver "Decisiones abiertas".
+2. **Una función de variables en vivo** que reproduzca `variables.py` con las velas hasta el momento de decisión: la misma regla de relleno, el mismo tipo de número (float32) y las 50 acciones completas antes de calcular los puestos (`p_*`) y las diferencias con el sector (`s_*`). Se prueba contra la tabla histórica de días pasados.
+3. **Ajustes de precio al día antes de la apertura.** Hoy `descargar_ajustes.py` corre de noche y filtra por fecha de pago; el día de un split o de un dividendo, sin la tabla al día, `ret_noche` y las variables de varios días quedan con un salto falso.
+4. **Guardar el modelo entrenado.** Hoy solo se guardan las predicciones. Falta guardar el LightGBM entrenado con 2016–2024, el orden de las columnas, la codificación del sector y una pendiente de calibración fija, con la regla de qué años la calculan escrita antes de correr.
+5. **Spread actual y caché de precios.** El spread histórico llega hasta 2024: sin una medición de 2025–2026, el costo esperado sale vacío y el modelo no operaría, sin avisar. `datos/referencia/cierres.npz` no se actualiza solo.
+6. **Calendario de sesiones y medios días.** Hoy los medios días se detectan por el volumen de la tarde, que en vivo no se conoce a las 10:00.
+7. **Noticias por ventanas cortas,** guardando la hora de llegada. El histórico usa la hora de publicación, que puede ser anterior a la de llegada.
+8. **Registro de decisiones** y control de una operación por acción y día, con salida a las 15:55.
+
 #### Cuánto tiene que durar la Fase 3 (cálculo del 16 de noviembre de 2026)
 
 Con las operaciones de la idea 5 como B (2020–2024): 27 operaciones al día, desviación de 137 bps por operación (107 bps en la parte de selección). D solo cambia las operaciones de las acciones con noticias; si cambia una fracción f de las operaciones y en ellas gana δ bps más que B, los días necesarios para detectarlo con 80% de probabilidad (una cola, 5%) son z² σ² / (δ² f N), con z = 2,49:
@@ -713,6 +726,7 @@ El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026).
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
 - [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos y se probó uno hasta las 15:55 (idea 5). Es el mejor resultado, pero sin significancia corregida. Queda como horizonte de B si sobrevive al control del costo en los bordes, con la regla fijada antes de medir (ver "Revisión contra el sobreajuste de la idea 5").
+- [ ] Datos de velas en vivo: con el plan gratuito, las velas del mercado completo llegan con 15 minutos de retraso. Opciones: (a) pagar el plan de datos en tiempo real de Alpaca (99 dólares al mes) desde la Fase 3 y no solo con dinero real; (b) usar en vivo las velas en tiempo real de una sola bolsa (IEX), que el plan gratuito sí da, aunque su volumen es una fracción del total y las variables de volumen no coincidirían con las del entrenamiento; (c) reentrenar el modelo decidiendo con velas de 20 minutos antes (cuenta como variante nueva). Por decidir antes de construir el paso 3.1.
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 

@@ -33,6 +33,7 @@ Estructura de salida:
     datos/spread/SIMBOLO.parquet             (una fila por momento muestreado)
     datos/spread_historico/SIMBOLO.parquet   (lo mismo, con --historico)
     datos/spread_bordes/SIMBOLO.parquet      (lo mismo, con --bordes)
+    datos/spread_reciente/SIMBOLO.parquet    (lo mismo, con --reciente: 2025 y 2026, para operar en vivo)
 
 Columnas: momento (UTC), franja, cotizaciones (cuántas hubo en el minuto),
 spread_bps (en centésimas de punto porcentual: 1 bps = 0,01%), spread_usd,
@@ -65,6 +66,9 @@ PAUSA = 0.35  # segundos entre peticiones, para no agotar el límite de Alpaca
 CARPETA_HISTORICO = RAIZ / "spread_historico"
 ANIOS_HISTORICO = range(2016, 2025)   # hasta 2024: la muestra final no se toca
 POR_TRIMESTRE = 8
+# --reciente: 2025 y 2026 para el costo esperado en vivo. Es un dato de costo, no un resultado del modelo.
+CARPETA_RECIENTE = RAIZ / "spread_reciente"
+ANIOS_RECIENTES = range(2025, 2027)
 # --bordes: los dos extremos de la idea 5 (entradas desde las 10:00, salida a las 15:55).
 CARPETA_BORDES = RAIZ / "spread_bordes"
 FRANJAS_BORDES = {"apertura": (10 * 60, 10 * 60 + 35), "cierre": (15 * 60 + 45, 15 * 60 + 59)}
@@ -94,12 +98,17 @@ def momentos(simbolo: str) -> list[tuple[pd.Timestamp, str]]:
     return salida
 
 
-def momentos_historicos(simbolo: str) -> list[tuple[pd.Timestamp, str]]:
+def momentos_recientes(simbolo: str) -> list[tuple[pd.Timestamp, str]]:
+    """Lo mismo que momentos_historicos, para 2025 y 2026: el costo esperado que necesita la operación en vivo."""
+    return momentos_historicos(simbolo, ANIOS_RECIENTES, "reciente")
+
+
+def momentos_historicos(simbolo: str, anios=ANIOS_HISTORICO, etiqueta: str = "historico") -> list[tuple[pd.Timestamp, str]]:
     """Momentos al azar en horario normal: POR_TRIMESTRE por cada trimestre con velas."""
-    azar = np.random.default_rng(zlib.crc32(f"{simbolo}-historico".encode()))
+    azar = np.random.default_rng(zlib.crc32(f"{simbolo}-{etiqueta}".encode()))
     desde, hasta, _ = FRANJAS["sesion"]
     salida = []
-    for anio in ANIOS_HISTORICO:
+    for anio in anios:
         archivo = RAIZ / "minuto" / simbolo / f"{anio}.parquet"
         if not archivo.exists():
             continue
@@ -170,10 +179,13 @@ def main() -> None:
     ap.add_argument("--forzar", action="store_true", help="Repite aunque el archivo ya exista")
     ap.add_argument("--historico", action="store_true", help="Muestra por trimestre de 2016 a 2024, en horario normal")
     ap.add_argument("--bordes", action="store_true", help="Muestra por trimestre de 2016 a 2024 en la apertura (10:00–10:35) y el cierre (15:45–15:59)")
+    ap.add_argument("--reciente", action="store_true", help="Muestra por trimestre de 2025 y 2026, en horario normal (costo esperado en vivo)")
     args = ap.parse_args()
 
     cli = cliente()
-    if args.bordes:
+    if args.reciente:
+        carpeta, elegir = CARPETA_RECIENTE, momentos_recientes
+    elif args.bordes:
         carpeta, elegir = CARPETA_BORDES, momentos_bordes
     else:
         carpeta, elegir = (CARPETA_HISTORICO, momentos_historicos) if args.historico else (CARPETA, momentos)
@@ -202,7 +214,7 @@ def main() -> None:
         if args.bordes:
             med = df.groupby("franja")["spread_bps"].median()
             print(f"[{i}/{len(args.simbolos)}] {simbolo}: " + " | ".join(f"{f} {med.get(f, np.nan):.1f} bps" for f in FRANJAS_BORDES), flush=True)
-        elif args.historico:
+        elif args.historico or args.reciente:
             med = df.groupby(df["momento"].dt.year)["spread_bps"].median()
             print(f"[{i}/{len(args.simbolos)}] {simbolo}: " + " | ".join(f"{a} {x:.1f}" for a, x in med.items()) + " bps", flush=True)
         else:

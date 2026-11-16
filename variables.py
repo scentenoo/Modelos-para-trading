@@ -55,9 +55,10 @@ HORIZONTES = [15, 30, 60]
 MAX_SIMBOLOS_POR_NOTICIA = 3
 
 
-def matrices(simbolo: str) -> dict:
-    """Matrices días x 390 minutos del horario normal: cierre, máximo, mínimo, volumen y monto."""
-    df = precios.cargar(simbolo)
+def matrices(simbolo: str, df: pd.DataFrame | None = None) -> dict:
+    """Matrices días x 390 minutos del horario normal: cierre, máximo, mínimo, volumen y monto.
+    `df` (opcional): velas ya cargadas y ajustadas; si no se da, se leen de precios.cargar."""
+    df = precios.cargar(simbolo) if df is None else df.copy()
     local = df["timestamp"].dt.tz_convert(ZONA)
     df["minuto"] = local.dt.hour * 60 + local.dt.minute - APERTURA
     df = df[(df["minuto"] >= 0) & (df["minuto"] < MINUTOS)]
@@ -138,8 +139,8 @@ def conteo_noticias(momentos_utc: np.ndarray, cierre_previo_utc: np.ndarray, not
                 min_desde_noticia=np.where(hasta > 0, np.minimum(minutos, 10_000), 10_000))
 
 
-def tabla_simbolo(simbolo: str, noticias_utc: np.ndarray) -> pd.DataFrame:
-    m = matrices(simbolo)
+def tabla_simbolo(simbolo: str, noticias_utc: np.ndarray, m: dict | None = None) -> pd.DataFrame:
+    m = matrices(simbolo) if m is None else m
     dias, n = m["dias"], len(m["dias"])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # días sin operaciones al comienzo de la sesión

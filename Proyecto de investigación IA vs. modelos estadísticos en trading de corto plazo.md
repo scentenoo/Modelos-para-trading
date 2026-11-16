@@ -11,11 +11,11 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de
 - **H0:** agregar la IA no aumenta la ganancia neta por operación frente al modelo de velas solo ni frente a la referencia.
 - **H1:** el sistema con IA obtiene una ganancia neta por operación mayor, con significancia estadística.
 
-**Alcance:** SPY, QQQ, IWM y 50 acciones líquidas de EE. UU., con velas de 1 minuto agregadas a 5 y 15 minutos. Quedan fuera por ahora opciones, cripto, apalancamiento y la Bolsa de Valores de Colombia.
+**Alcance:** SPY, QQQ, IWM y 50 acciones líquidas de EE. UU., con velas de 1 minuto. Se investiga con las 53 y se opera solo en las baratas de operar: 39 a 60 minutos y 26 a 30 minutos. Quedan fuera por ahora opciones, cripto, apalancamiento y la Bolsa de Valores de Colombia.
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) casi terminada. Ya están descargadas y comprobadas las cinco fuentes: velas, ajustes corporativos, noticias, comunicados de la SEC y cifras financieras. Solo falta la actualización diaria automática (paso 1.9).
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1) y las variables están construidas (paso 2.2); sigue programar la referencia (paso 2.5).
 
 ## 2. Cómo funciona el sistema
 
@@ -27,7 +27,11 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de
 | IA (LLM) | Noticias y comunicados de la empresa | Variables sobre cada noticia: tono, tipo de evento, sorpresa, relevancia |
 | Capa de riesgo | Las predicciones de cualquier competidor | Cuánto apostar en cada operación y cuándo parar |
 
-**El horizonte es corto.** La ventaja de la IA es leer y procesar rápido, así que se opera en los minutos siguientes a una noticia. Eso además ayuda con los costos: tras una noticia el precio se mueve más que en un minuto cualquiera, y operar cuesta lo mismo. El horizonte exacto (5, 15 o 30 minutos) se decide midiendo, no por intuición (paso 2.1).
+**El horizonte es de 30 y 60 minutos**, en horario normal de mercado; 15 minutos queda como comparación. Sale de la medición del paso 2.1 (sección 3): a 5 minutos el costo solo deja operar unas 10 acciones, y a 60 minutos deja 39. Sigue siendo corto plazo, pero ya no es una carrera de velocidad, y le da tiempo a un modelo grande de leer la noticia sin llegar tarde.
+
+**No se opera todo.** Solo una de cada seis noticias va seguida de un movimiento grande. El sistema gana si distingue esas; operar tras cada noticia pierde por costos.
+
+**Lo que sale fuera del horario normal** (casi la mitad de las noticias y el 84% de los comunicados) no se opera en el momento, porque ahí el costo es entre 6 y 9 veces mayor. Se usa como señal para la apertura siguiente.
 
 ### Los cuatro competidores
 
@@ -59,8 +63,8 @@ Cada fase avanza solo si cumple su criterio de salida.
 | Fase | Cuándo | Estado | Criterio de salida |
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Falta escribir los criterios de éxito | Llaves funcionando y criterios de éxito escritos |
-| 1 · Datos | Semanas 2–3 | Falta solo la actualización automática | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | Por empezar | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
+| 2 · Investigación histórica | Semanas 4–11 | En curso: costos medidos y variables listas | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -81,14 +85,16 @@ Cada fase avanza solo si cumple su criterio de salida.
 - [x] 1.6 Noticias: 339.955 noticias de 2016 a hoy, en `datos/noticias`.
 - [x] 1.7 Comunicados oficiales 8-K de la SEC: 8.333 comunicados de las 50 acciones (2.342 de resultados trimestrales) y 14.272 documentos de texto, en `datos/sec`.
 - [x] 1.8 Cifras financieras de la SEC: las 50 acciones, en `datos/sec/cifras`.
-- [ ] 1.9 Actualización diaria automática de velas, ajustes, noticias y datos de la SEC.
+- [x] 1.9 Actualización diaria: `actualizar.py` pone al día las cuatro fuentes en 13 minutos y deja registro en `datos/registros`. Una tarea programada de Windows lo corre cada noche a las 9:00 p. m., si el portátil está encendido; si estaba apagado, corre al encenderlo.
 
 ### Fase 2 · Investigación histórica
 
 Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vivo.
 
-- [ ] 2.1 **Medir la barrera de costos.** Para cada acción, cuánto se mueve el precio en 5, 15, 30 y 60 minutos, en un minuto cualquiera y justo después de una noticia, comparado con el costo de entrar y salir. De aquí salen el horizonte, las acciones que vale la pena operar y el tamaño de muestra de la Fase 3.
-- [ ] 2.2 **Variables por acción:** retornos, volatilidad, liquidez (volumen, diferencial entre compra y venta), beta y sector.
+**Orden de trabajo:** 2.1 → 2.2 → 2.5 → 2.6 → 2.3 → 2.4 → 2.7 → 2.8 → 2.9. La segmentación y los regímenes (2.3 y 2.4) van después del primer modelo, para medir si agrupar mejora algo frente a un modelo simple, en vez de suponerlo.
+
+- [x] 2.1 **Medir la barrera de costos.** Hecho con `muestrear_spread.py` y `barrera_costos.py`; el detalle por acción está en `resultados/barrera_costos.md`. Ver el resumen abajo.
+- [x] 2.2 **Variables por acción:** `variables.py` arma una fila por acción cada 15 minutos en horario normal: 3,6 millones de filas y 41 columnas en `datos/variables` (retornos pasados, volatilidad, posición en el rango del día, volumen relativo, beta, retornos sin la parte del mercado, conteo de noticias, sector y los retornos futuros a 15, 30 y 60 minutos). Se comprobó con 1.800 pruebas que ninguna variable usa información posterior al momento de decisión.
 - [ ] 2.3 **Segmentar las acciones:** PCA sobre los retornos, clustering jerárquico sobre la distancia de correlación, y K-means o mezclas gaussianas sobre las variables.
 - [ ] 2.4 **Segmentar el tiempo en regímenes:** calma, pánico, tendencia, lateralidad. Modelo oculto de Markov o mezcla gaussiana sobre la volatilidad.
 - [ ] 2.5 **Programar la referencia (competidor A):** los cuatro efectos documentados.
@@ -96,6 +102,27 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
 - [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
 - [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, los modelos de IA locales y las instrucciones para que la IA lea noticias.
+
+#### Resultado del paso 2.1
+
+Acierto mínimo: el porcentaje de veces que hay que acertar la dirección para no perder, operando tras una noticia y pagando un spread completo por entrar y salir. Mediana de los 53 símbolos, con velas desde 2023.
+
+| Horizonte | Costo en horario normal | Movimiento tras noticia | Acierto mínimo | Acciones con acierto mínimo de 55% o menos |
+| --- | --- | --- | --- | --- |
+| 5 min | 2,7 bps | 12,4 bps | 61,8% | 10 de 53 |
+| 15 min | 2,7 bps | 21,3 bps | 56,7% | 19 de 53 |
+| 30 min | 2,7 bps | 28,4 bps | 55,1% | 26 de 53 |
+| 60 min | 2,7 bps | 38,6 bps | 53,7% | 39 de 53 |
+
+(1 bps = 0,01%.)
+
+- **Fuera del horario normal no se puede operar** la mayoría de las acciones: el costo mediano es 24,6 bps en el pre-mercado y 15,5 en el post-mercado, contra 2,7 en horario normal. Solo los ETF y unas pocas acciones muy grandes lo permiten.
+- **La noticia promedio mueve poco:** el precio se mueve cerca de un 20% más que a esa misma hora sin noticia. La mayoría de las noticias son ruido: solo el 16% va seguida de un movimiento grande, contra el 10% que se esperaría por azar. El valor de la IA está en distinguir ese 16%.
+- **Las más baratas de operar:** QQQ, IWM, SPY, NVDA, INTC, TSLA, NFLX, GOOGL, WMT y AAPL.
+- **Si el costo real fuera el doble,** a 60 minutos quedarían 16 acciones y a 5 minutos, 4.
+- **Tamaño de muestra de la Fase 3:** con un acierto real de 57% hacen falta entre 2.000 y 4.600 operaciones según el horizonte; con 55%, entre 7.000 y 53.000. Con 53% no alcanza.
+
+Límites de la medición: no incluye comisiones ni el efecto del tamaño de la orden; supone que se gana y se pierde lo mismo en promedio; y un modelo que solo opera cuando está seguro puede necesitar menos acierto que el promedio.
 
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
@@ -187,7 +214,7 @@ Las métricas y el umbral de éxito se fijan por escrito antes de ver resultados
 - **Validación:** hacia adelante (walk-forward) y una muestra final que no se toca hasta el cierre.
 - **Comparaciones múltiples:** se prueban varios competidores y varios tamaños de LLM; elegir el mejor entre muchos infla el resultado. Se usa el Reality Check de White o el test SPA de Hansen, el Deflated Sharpe ratio, y Romano-Wolf o Bonferroni para varias hipótesis.
 - **Ventaja propia:** se separa la ganancia que viene de estar expuesto al mercado de la que es ventaja real, con `residual-edge-analyzer`.
-- **Tamaño de muestra:** se calcula después del paso 2.1, con la variabilidad real de la ganancia neta por operación.
+- **Tamaño de muestra:** según el paso 2.1, entre 2.000 y 4.600 operaciones si el acierto real es de 57%, y muchas más si es menor. Se fija al elegir el horizonte.
 - **Muestra efectiva:** los datos de minutos están autocorrelacionados, y varias acciones reaccionan a la misma noticia; millones de filas no equivalen a millones de observaciones independientes.
 
 ## 6. Riesgo, tamaño de posición y ejecución
@@ -211,6 +238,10 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `descargar_ajustes.py` | Baja splits, dividendos y escisiones, con el precio de apertura de cada empresa escindida |
 | `descargar_noticias.py` | Baja las noticias, un archivo por mes |
 | `descargar_sec.py` | Baja de la SEC el índice de comunicados 8-K, las cifras financieras y los textos. Necesita `SEC_USER_AGENT` en `.env` |
+| `actualizar.py` | Corre los cuatro scripts de descarga en orden y deja un registro por día |
+| `muestrear_spread.py` | Mide el costo de operar cada acción con cotizaciones reales de compra y venta |
+| `barrera_costos.py` | Compara el movimiento del precio con el costo y calcula el acierto mínimo; escribe `resultados/barrera_costos.md` |
+| `variables.py` | Arma la tabla de variables y retornos futuros para los modelos, sin usar información del futuro |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 
 ### Habilidades instaladas en `.claude/skills/`
@@ -266,6 +297,21 @@ El PC viejo queda como servidor 24/7 en la red local; el portátil hace desarrol
 | Google Drive | Respaldo nocturno con rclone | No se trabaja directo desde Drive |
 | Kaggle / Colab | GPU gratis para redes neuronales más grandes | Solo si hace falta |
 
+### Quién entrena y quién opera
+
+El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo de pocos megas y para usarlo no hace falta la historia con la que aprendió.
+
+| | Portátil | PC viejo |
+| --- | --- | --- |
+| Tarea | Entrenar, analizar y reentrenar | Bajar datos nuevos, correr el modelo, registrar decisiones |
+| Datos que necesita | Todo el histórico (4,3 GB) | El año en curso |
+| Exigencia | Alta, de vez en cuando | Baja, todos los días |
+
+- **El PC viejo no descarga el histórico.** Baja solo el año en curso (unos 8 minutos), que alcanza para las variables que miran hacia atrás, como la volatilidad de los últimos 20 días.
+- **Reentrenamiento:** cada mes o cada trimestre, en el portátil. Se le copian los datos nuevos que acumuló el PC viejo, se reentrena y se devuelve el archivo del modelo.
+- **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
+- **Modelos de IA locales:** uno mediano (7–8B) no cabe en los 4 GB del PC viejo. O corre en el portátil, o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
+
 Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se reinstala o se limpia.
 
 ## 9. Reglas y decisiones
@@ -282,7 +328,6 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers), confirmando que acepte residentes en Colombia.
 - [ ] Regla de "pattern day trader" de EE. UU.: el repositorio day-trader-skill afirma que FINRA eliminó el mínimo de 25.000 dólares en junio de 2026 (aviso 26-10) y que los brókers tienen hasta octubre de 2027 para aplicarlo. Confirmar con FINRA y con Alpaca antes de darlo por hecho.
-- [ ] Horizonte principal: sale del paso 2.1.
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 
@@ -292,13 +337,18 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [x] Precios sin ajustar, con splits, dividendos y escisiones aplicados al leer.
 - [x] La IA lee noticias; los modelos de árboles leen velas.
 - [x] El éxito se mide en ganancia neta, no en acierto.
-- [x] El horizonte sigue siendo corto.
+- [x] Horizonte: 30 y 60 minutos en horario normal; 15 minutos como comparación.
+- [x] Lo que sale fuera del horario normal no se opera en el momento; es señal para la apertura siguiente.
+- [x] Se opera solo en las acciones baratas de operar (acierto mínimo de 55% o menos según el paso 2.1).
+- [x] El portátil entrena y el PC viejo opera.
 - [x] El PC viejo y los modelos de IA se configuran al final.
 
 ## 10. Historial de cambios
 
 | Tema | Versión 1 | Versión actual | Por qué |
 | --- | --- | --- | --- |
+| Horizonte | 5 a 15 minutos | 30 y 60 minutos | A 5 minutos el costo exige acertar el 62% de las veces; a 60, el 54% |
+| Qué se opera | Todas las acciones, a cualquier hora | Las baratas de operar, en horario normal | Fuera de sesión el costo es entre 6 y 9 veces mayor |
 | Papel de la IA | Competía contra los modelos clásicos con los mismos números | Lee noticias; los árboles leen velas; se suman | Con números puros un LLM no tiene ventaja sobre XGBoost y es mucho más lento y caro |
 | Criterio de éxito | Tasa de acierto (53% contra 50%) | Ganancia neta por operación | A 5 minutos, 53% de acierto no alcanza a pagar los costos |
 | Qué se predice | Si cada acción sube o baja | El orden de las acciones, de mejor a peor | Quita el ruido del mercado general y da más observaciones por día |

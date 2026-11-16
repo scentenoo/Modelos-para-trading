@@ -86,6 +86,21 @@ UNIVERSO = [
     "LIN",
 ]
 
+# Sector de cada símbolo (para la segmentación y como variable de los modelos).
+SECTOR = {
+    **dict.fromkeys(["SPY", "QQQ", "IWM"], "etf"),
+    **dict.fromkeys(["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "AMD", "ORCL", "CRM", "ADBE", "INTC"], "tecnologia"),
+    **dict.fromkeys(["JPM", "BAC", "GS", "MS", "WFC", "V", "MA"], "financiero"),
+    **dict.fromkeys(["JNJ", "UNH", "PFE", "MRK", "ABBV", "LLY"], "salud"),
+    **dict.fromkeys(["WMT", "COST", "PG", "KO", "PEP", "MCD", "NKE", "HD", "TSLA"], "consumo"),
+    **dict.fromkeys(["XOM", "CVX", "COP"], "energia"),
+    **dict.fromkeys(["CAT", "BA", "GE", "HON", "UPS"], "industrial"),
+    **dict.fromkeys(["NEE", "DUK", "SO"], "servicios_publicos"),
+    **dict.fromkeys(["DIS", "NFLX", "T", "VZ"], "comunicaciones"),
+    **dict.fromkeys(["LIN"], "materiales"),
+}
+assert set(SECTOR) == set(UNIVERSO), "SECTOR y UNIVERSO deben tener los mismos símbolos"
+
 RAIZ = Path(__file__).resolve().parent / "datos"
 CARPETAS = {"raw": RAIZ / "minuto", "all": RAIZ / "minuto_ajustado"}
 AJUSTES = {"raw": Adjustment.RAW, "all": Adjustment.ALL}

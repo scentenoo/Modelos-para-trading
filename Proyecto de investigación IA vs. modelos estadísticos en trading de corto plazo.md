@@ -675,7 +675,7 @@ El PC viejo queda como servidor 24/7 en la red local; el portátil hace desarrol
 
 | Componente | Rol | Notas |
 | --- | --- | --- |
-| PC viejo (Linux, \~4 GB) | Descarga datos, guarda, programa tareas, registra decisiones | Sin entorno gráfico, SSH con llaves, IP fija, cable de red si es posible |
+| PC viejo (Debian sin entorno gráfico, \~4 GB) | Descarga datos, guarda, programa tareas, registra decisiones | Debian instalado (noviembre de 2026). Falta: SSH con llaves, IP fija, cable de red si es posible |
 | Portátil (Celeron N5095, 16 GB) | Desarrollo, entrenamiento de modelos de árboles, modelos locales pequeños | Agregar un segundo módulo DDR4 para doble canal |
 | Claude por API | Lectura de noticias en tiempo real | Se paga aparte del plan Pro |
 | Google Drive | Respaldo nocturno con rclone | No se trabaja directo desde Drive |
@@ -696,7 +696,7 @@ El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo
 - **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
 - **Modelos de IA locales:** uno mediano (7–8B) no cabe en los 4 GB del PC viejo. O corre en el portátil, o el experimento se queda con el modelo pequeño y Claude por API. Se decide en el paso 2.9.
 
-Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se reinstala o se limpia.
+El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Lo siguiente es instalar los modelos de IA pequeños (paso 2.9).
 
 ## 9. Reglas y decisiones
 

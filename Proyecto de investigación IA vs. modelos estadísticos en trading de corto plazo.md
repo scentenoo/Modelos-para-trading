@@ -221,7 +221,7 @@ Hecho con `filtro.py` el 16 de noviembre de 2026, con el diseño anotado en "Ide
 
 #### Revisión de la ganancia de la versión calibrada a 60 minutos
 
-Adelanto del paso 2.8, hecho el 16 de noviembre de 2026 con `residual-edge-analyzer` sobre la ganancia neta diaria de 2020–2024. Es descriptivo y no cuenta como variante. Fue un análisis exploratorio: falta dejarlo como script del proyecto.
+Adelanto del paso 2.8, hecho el 16 de noviembre de 2026 con `ventaja.py`, que usa `residual-edge-analyzer` sobre la ganancia neta diaria de 2020–2024. Es descriptivo y no cuenta como variante. El detalle de los dos horizontes está en `resultados/ventaja.md`.
 
 - **No es exposición al mercado:** SPY explica el 2% de la variación diaria y la beta es −0,02. Con el promedio de las 50 acciones, o sumando la referencia, la conclusión no cambia.
 - **Está concentrada en pocos días:** los 10 mejores días aportan 40.307 de los 52.234 bps de ganancia total (77%). Marzo de 2020 solo aporta 25.532.
@@ -229,7 +229,8 @@ Adelanto del paso 2.8, hecho el 16 de noviembre de 2026 con `residual-edge-analy
 - **Las compras ganan más que las ventas:** 4,68 bps contra 0,59, y solo el 36% de las operaciones son compras.
 - **Por acción:** 23 de 36 ganan; NVDA aporta el 28% y AAPL el 16%.
 - **Veredicto de la herramienta:** ventaja frágil, porque la ganancia es positiva en muy pocas de las ventanas de 63 días.
-- **Consecuencia:** la ganancia descansa en marzo de 2020, que es donde el costo está peor medido (el spread de AAPL ese mes era unas 5 veces el de hoy). Por eso se está midiendo el spread de cada época.
+- **A 30 minutos pasa lo mismo:** los 10 mejores días aportan el 74% de la ganancia, casi todos de 2022, y sin ellos quedan 0,25 bps por operación (t 0,46).
+- **Consecuencia:** la ganancia a 60 minutos descansa en marzo de 2020, que es donde el costo está peor medido (el spread de AAPL ese mes era unas 5 veces el de hoy). Por eso se está midiendo el spread de cada época.
 
 #### Resultado de los pasos 2.3 y 2.4
 
@@ -429,6 +430,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
 | `modelo_velas.py` | Entrena el modelo de velas (competidor B) con validación hacia adelante y lo compara con la referencia; escribe `resultados/modelo_velas.md` |
 | `segmentos.py` | Calcula los grupos de acciones y los regímenes de mercado por ventana de validación, y mide si la señal del modelo de velas cambia según el segmento; escribe `resultados/segmentos.md` |
+| `ventaja.py` | Revisa de dónde sale la ganancia de un archivo de operaciones: si es ventaja propia o exposición al mercado, y cuánto depende de pocos días, de un año o de pocas acciones; escribe `resultados/ventaja.md` |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |

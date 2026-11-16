@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. La pista más prometedora es el horizonte: la señal sigue creciendo si la operación se mantiene dos o tres horas, con el mismo costo. Lo siguiente es volver a costear las operaciones con el spread de cada época, que se está midiendo, y con eso decidir si se prueba un horizonte más largo. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). La pista más prometedora sigue siendo el horizonte: la señal crece si la operación se mantiene dos o tres horas, con el mismo costo. Falta decidir el costo oficial y si se prueba un horizonte más largo. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -277,6 +277,26 @@ Hecho con `comparaciones.py` el 16 de noviembre de 2026, sobre la ganancia neta 
 - Los t de los demás informes agrupan por día pero suponen días independientes; para decidir vale el de este informe.
 - Cada variante nueva que se pruebe se agrega a la lista de `comparaciones.py`, también si se descarta.
 
+#### Sensibilidad al costo: el spread de cada época
+
+Hecho con `recostear.py` el 16 de noviembre de 2026, con el spread muestreado por `muestrear_spread.py --historico` (8 momentos por símbolo y trimestre, 53 símbolos, 2016–2024). No entrena nada y no cuenta como variante. El detalle está en `resultados/costo_historico.md`.
+
+Cada operación se cobra con el spread mediano de su símbolo en ese trimestre, corregido por la volatilidad de su día. Hay dos lecturas: las mismas operaciones con el costo de la época, y volviendo a decidir, donde el modelo opera solo si la ganancia esperada supera el spread del trimestre anterior (lo que se sabía entonces) y paga el del trimestre en curso.
+
+| Horizonte | Versión | Costo de hoy | Neta (t) | Costo de la época | Mismas operaciones: neta (t) | Volviendo a decidir: neta (t) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 30 min | Segunda | 1,54 bps | 0,42 (0,91) | 3,41 bps | −1,45 (−3,07) | 0,08 (0,20) |
+| 30 min | Segunda calibrada | 1,45 bps | 0,94 (1,61) | 3,49 bps | −1,10 (−1,89) | 0,56 (0,99) |
+| 60 min | Segunda | 1,91 bps | 1,20 (1,88) | 3,19 bps | −0,07 (−0,11) | 0,46 (0,85) |
+| 60 min | Segunda calibrada | 1,70 bps | 2,07 (2,29) | 3,26 bps | 0,51 (0,57) | 1,00 (1,40) |
+
+- **Con el costo de la época ninguna versión se distingue de cero,** y con el costo doble todas pierden. El filtro de operaciones también queda negativo (−1,89 y −0,38 bps). La referencia pierde más (−2,51 y −2,76).
+- **El spread de cada año no explica la caída.** La mediana entre símbolos estuvo entre 0,56 y 0,99 veces la de hoy en todos los años de 2016 a 2024. Las acciones que hicieron split sí costaban mucho más antes (GOOGL entre 3,6 y 6,2 veces).
+- **Lo que la explica es cuándo opera el modelo.** El spread sube 0,42% por cada 1% de volatilidad del día (t 37,2, con 15.108 muestras), y el modelo opera sobre todo en días de mucha volatilidad. Por eso sus operaciones cuestan más del doble que con el spread de hoy. En marzo de 2020 el spread fue 2,13 veces el de hoy.
+- **Volviendo a decidir se recupera algo, porque el modelo opera menos en épocas caras,** pero tampoco alcanza: la calibrada a 60 minutos queda en 1,00 bps (t 1,40) y en −0,85 con el costo doble.
+- **2020 sigue sosteniendo el resultado a 60 minutos.** Con el costo de la época ese año da 6,99 bps por operación (marzo de 2020 suma 22.171 bps, contra 25.532 con el costo de hoy). De 2021 a 2023 queda negativa y 2024 da 0,87.
+- **Consecuencia:** el costo de hoy subestima lo que pagan las operaciones del modelo, y la ventaja medida hasta ahora dependía de eso. Cualquier versión nueva, incluido un horizonte más largo, tendría que pagar el costo de la época.
+
 #### Resultado de los pasos 2.3 y 2.4
 
 Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
@@ -394,7 +414,7 @@ Cada comunicado trae la hora exacta en que quedó público (verificada en UTC) y
 - **Sesgo de supervivencia:** el universo son empresas que existen hoy.
 - **LIN** tiene datos solo desde 2018, cuando empezó a cotizar con ese símbolo.
 - **Las cifras de la SEC llegan después del comunicado de resultados.** Vienen del informe trimestral (10-Q o 10-K), no del 8-K. De 1.893 comunicados de resultados de 2016 a 2024, solo en el 20% las cifras estaban disponibles ese mismo día; la mediana es 7 días después. Usarlas el día del comunicado sería usar información del futuro. Visa no reporta ganancia por acción en estos datos.
-- **El costo usa el spread de hoy para toda la historia:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo. Alpaca sí entrega cotizaciones de años anteriores, así que `muestrear_spread.py --historico` está tomando una muestra por trimestre de 2016 a 2024 (en `datos/spread_historico`). Con eso se volverán a costear las operaciones guardadas con `recostear.py`, como prueba de sensibilidad. Primer indicio, con 8 de 53 símbolos medidos: GOOGL y AMZN costaban entre 4 y 7 bps de 2016 a 2021, contra 0,7 hoy, porque antes de sus splits de 2022 valían más de mil dólares por acción; el costo de esos años está subestimado en las acciones que hicieron split. Adoptarlo como costo oficial cambiaría una regla de la sección 5 y está por decidir.
+- **El costo usa el spread de hoy para toda la historia:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo. Alpaca sí entrega cotizaciones de años anteriores, así que `muestrear_spread.py --historico` tomó una muestra por trimestre de 2016 a 2024 para los 53 símbolos (en `datos/spread_historico`), y `recostear.py` volvió a costear las operaciones guardadas. El spread típico de cada año era parecido o menor que el de hoy, pero el de las operaciones del modelo es más del doble, porque opera en días volátiles; las acciones que hicieron split (GOOGL, AMZN) costaban entre 4 y 7 bps antes de 2022, contra 0,7 hoy. Con ese costo la ventaja desaparece (ver "Sensibilidad al costo"). Adoptarlo como costo oficial cambiaría una regla de la sección 5 y está por decidir.
 - **Empresas reorganizadas:** Exxon (2026), Disney (2019) y Broadcom (2018) pasaron a una sociedad nueva y la SEC les dio otro número de registro. `descargar_sec.py` tiene una tabla con los registros anteriores; si otra empresa se reorganiza, hay que agregarla ahí.
 
 ### Pagos opcionales
@@ -480,7 +500,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `ventaja.py` | Revisa de dónde sale la ganancia de un archivo de operaciones: si es ventaja propia o exposición al mercado, cuánto depende de pocos días, de un año o de pocas acciones, y cuánto es selección y cuánto mercado; escribe `resultados/ventaja.md` |
 | `diagnosticos.py` | Mide si la señal del modelo de velas es mayor después de una noticia y cuánto dura si la operación se mantiene más tiempo; escribe `resultados/diagnosticos.md` |
 | `comparaciones.py` | Corrige por el número de variantes probadas (Bonferroni, Holm y SPA de Hansen con remuestreo por bloques); escribe `resultados/comparaciones.md` |
-| `recostear.py` | Vuelve a costear las operaciones guardadas con el spread del trimestre en que ocurrieron; escribirá `resultados/costo_historico.md` cuando termine el muestreo |
+| `recostear.py` | Vuelve a costear las operaciones guardadas con el spread del trimestre en que ocurrieron, corregido por la volatilidad del día; escribe `resultados/costo_historico.md` |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
@@ -572,7 +592,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
 - [ ] Prueba oficial de significancia: la sección 5 dice que se hace sobre la ganancia neta de cada día, y eso supone días independientes. Los días buenos vienen en racha, así que se propone usar remuestreo por bloques, como hace `comparaciones.py`. Cambia un criterio y está por decidir.
 - [ ] Horizonte: si se reabre la decisión de 30 y 60 minutos para probar uno más largo (idea 5 en reserva).
-- [ ] Costo oficial: el spread de hoy para toda la historia (regla actual) o el spread de cada época. Se decide al ver `resultados/costo_historico.md`.
+- [ ] Costo oficial: el spread de hoy para toda la historia (regla actual) o el spread de cada época. Ya está `resultados/costo_historico.md`: con el de cada época ninguna versión se distingue de cero, porque el modelo opera en días volátiles, cuando el spread es más alto. El de hoy queda demostrado como optimista para este modelo.
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 

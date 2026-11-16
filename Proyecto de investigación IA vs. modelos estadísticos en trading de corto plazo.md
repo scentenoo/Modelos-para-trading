@@ -449,6 +449,28 @@ Diseño del 16 de noviembre de 2026. Las instrucciones y el formato se fijan ant
 
 Horario del mercado en Colombia: 9:30 a. m.–4:00 p. m. en invierno de EE. UU.; una hora antes desde marzo.
 
+#### Cuánto tiene que durar la Fase 3 (cálculo del 16 de noviembre de 2026)
+
+Con las operaciones de la idea 5 como B (2020–2024): 27 operaciones al día, desviación de 137 bps por operación (107 bps en la parte de selección). D solo cambia las operaciones de las acciones con noticias; si cambia una fracción f de las operaciones y en ellas gana δ bps más que B, los días necesarios para detectarlo con 80% de probabilidad (una cola, 5%) son z² σ² / (δ² f N), con z = 2,49:
+
+| Fracción con noticias (f) | δ = 5 bps | δ = 10 bps | δ = 20 bps |
+| --- | --- | --- | --- |
+| 10% | 82 meses | 21 meses | 5,2 meses |
+| 15% | 55 meses | 14 meses | 3,4 meses |
+| 25% | 33 meses | 8,2 meses | 2,1 meses |
+
+- **Supuestos:** f entre 15% y 25% sale de los diagnósticos (13% a 15% de los momentos tienen noticia en la última hora; un tercio, noticias del día). δ = 5 bps por operación afectada ya sería casi el doble de la ganancia neta de B.
+- **Puede ser peor:** la desviación diaria real de B (1.187 bps) es mayor que la que darían operaciones independientes (714), porque las operaciones de un mismo día se mueven juntas. Si eso pasa también con la diferencia entre D y B, los meses se multiplican hasta por 2,8.
+- **Con los cuatro tamaños de LLM** y corrección de Bonferroni, z sube a 3,08: hace falta un 50% más de tiempo.
+- **Conclusión:** con efectos realistas (5 a 10 bps en el 15% a 25% de las operaciones), 5 meses no alcanzan; harían falta entre 8 meses y varios años. Un ajuste inicial de 2 a 3 meses empeora el problema.
+
+**Formas de ganar potencia, por decidir antes de empezar:**
+1. **Un solo LLM como prueba principal** (el que se elija en el paso 2.9) y los demás tamaños como análisis secundario: evita la corrección por cuatro.
+2. **Medir D contra B en la parte de selección** (con la parte de mercado cubierta): baja la desviación de 137 a 107 bps y ahorra cerca de 40% del tiempo. Cambia el criterio de la sección 5, que mide sin cobertura.
+3. **Una prueba de señal además de la de ganancia:** comparar el orden predicho por D y por B en todas las acciones y momentos, operen o no (300 observaciones al día en vez de 27). No reemplaza la ganancia neta como criterio, pero dice antes si la IA aporta.
+4. **Ajuste inicial corto:** una capa de unos 7 coeficientes con penalización se puede ajustar con un mes de datos.
+
+
 ### Fase 4 · Dinero real
 
 - [ ] 4.1 Solo si H0 se rechaza.

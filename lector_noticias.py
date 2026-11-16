@@ -283,13 +283,36 @@ class Modelo:
 # Falta ModeloClaude: API de Anthropic (paquete `anthropic`), messages.create con
 # system=instrucciones, temperature=0, y tokens de response.usage.
 
+def simbolos_de_entrada(entrada: str) -> list[str]:
+    """Los símbolos que armar_entrada puso después de 'Companies:'."""
+    return re.findall(r"^- ([A-Z.]+)", entrada.rsplit("\nCompanies:\n", 1)[-1], flags=re.M)
+
+
+def esquema_respuesta(simbolos: list[str]) -> dict:
+    """Esquema JSON de la respuesta: el modelo solo puede devolver una lista con un objeto por
+    símbolo enviado, con los valores permitidos. No cambia las instrucciones; evita respuestas
+    mal formadas. La validación de siempre se sigue aplicando después."""
+    entero = lambda a, b: {"type": "integer", "minimum": a, "maximum": b}
+    objeto = {"type": "object", "additionalProperties": False,
+              "properties": {"simbolo": {"type": "string", "enum": simbolos}, "relevancia": entero(0, 2),
+                             "tono": entero(-2, 2), "tipo_evento": {"type": "string", "enum": TIPOS_EVENTO},
+                             "novedad": entero(0, 1), "sorpresa": entero(0, 2),
+                             "decision": {"type": "string", "enum": DECISIONES},
+                             "retorno_esperado_bps": {"type": "integer"}, "confianza": {"type": "number", "minimum": 0, "maximum": 1},
+                             "razon": {"type": "string"}},
+              "required": ["simbolo", "relevancia", "tono", "tipo_evento", "novedad", "sorpresa", "decision",
+                           "retorno_esperado_bps", "confianza", "razon"]}
+    return {"type": "object", "additionalProperties": False, "required": ["evaluaciones"],
+            "properties": {"evaluaciones": {"type": "array", "items": objeto, "minItems": len(simbolos), "maxItems": len(simbolos)}}}
+
+
 class ModeloOllama(Modelo):
     """Modelo local servido por Ollama (API HTTP, por defecto en el puerto 11434).
-    Pide salida JSON (`format: json`), temperatura 0 y semilla fija. Un error de red o
+    Pide salida con el esquema JSON de la respuesta (`format`), temperatura 0 y semilla fija. Un error de red o
     de tiempo cuenta como respuesta inválida: se reintenta y, si vuelve a fallar, queda
     como "sin respuesta"."""
 
-    def __init__(self, modelo: str, url: str = "http://localhost:11434", tiempo_max: float = 120.0):
+    def __init__(self, modelo: str, url: str = "http://localhost:11434", tiempo_max: float = 300.0):
         self.nombre, self.url, self.tiempo_max = modelo, url.rstrip("/"), tiempo_max
         self.identificador = modelo
         try:      # la versión exacta: el resumen (digest) del modelo descargado
@@ -307,7 +330,8 @@ class ModeloOllama(Modelo):
             return json.loads(r.read().decode())
 
     def responder(self, instrucciones: str, entrada: str) -> tuple[str, int, int]:
-        cuerpo = {"model": self.nombre, "stream": False, "format": "json",
+        simbolos = simbolos_de_entrada(entrada)
+        cuerpo = {"model": self.nombre, "stream": False, "format": esquema_respuesta(simbolos),
                   "options": {"temperature": 0, "seed": 7},
                   "messages": [{"role": "system", "content": instrucciones}, {"role": "user", "content": entrada}]}
         try:
@@ -331,7 +355,7 @@ class ModeloSimulado(Modelo):
         n = self._llamadas.get(entrada, 0)
         self._llamadas[entrada] = n + 1
         semilla = int(hashlib.sha256(entrada.encode()).hexdigest(), 16)
-        simbolos = re.findall(r"^- ([A-Z.]+)", entrada.rsplit("\nCompanies:\n", 1)[-1], flags=re.M)
+        simbolos = simbolos_de_entrada(entrada)
         if random.Random(f"{semilla}-{n}-inv").random() < self.prob_invalida:
             texto = random.Random(f"{semilla}-{n}-tipo").choice([
                 "Sorry, I cannot rate this news.",

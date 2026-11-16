@@ -470,6 +470,8 @@ Con las operaciones de la idea 5 como B (2020–2024): 27 operaciones al día, d
 3. **Una prueba de señal además de la de ganancia:** comparar el orden predicho por D y por B en todas las acciones y momentos, operen o no (300 observaciones al día en vez de 27). No reemplaza la ganancia neta como criterio, pero dice antes si la IA aporta.
 4. **Ajuste inicial corto:** una capa de unos 7 coeficientes con penalización se puede ajustar con un mes de datos.
 
+**Decidido el 16 de noviembre de 2026:** se adoptan la 1, la 3 y la 4. La prueba principal de D contra B usa un solo LLM, elegido en el paso 2.9 antes de empezar; los demás tamaños son análisis secundario, sin corrección. Se agrega la prueba de señal (orden predicho por D frente al de B en todas las acciones y momentos), como apoyo, sin reemplazar la ganancia neta. El ajuste inicial de la capa de D dura un mes. La 2 (medir en la parte de selección) queda para después, porque cambia un criterio escrito. Aun así, la Fase 3 probablemente necesita más de 5 meses; su duración se fija al elegir el LLM.
+
 
 ### Fase 4 · Dinero real
 

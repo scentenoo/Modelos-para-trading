@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero todavía no alcanza la significancia que exigen 8 variantes probadas. Lo siguiente son las ideas en reserva, empezando por el filtro de operaciones. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero todavía no alcanza la significancia que exigen las variantes probadas (van 10), y esa ganancia depende de marzo de 2020. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Lo siguiente es volver a costear las operaciones con el spread de cada época, que se está midiendo. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -198,6 +198,39 @@ La predicción de cada año se multiplica por una pendiente calculada con los a�
 - La calibración queda como parte fija del modelo de velas. Estos números son del periodo de desarrollo; los criterios de la sección 5 se miden en la muestra final.
 - Variantes probadas hasta ahora: 8.
 
+#### Resultado del filtro de operaciones (meta-labeling)
+
+Hecho con `filtro.py` el 16 de noviembre de 2026, con el diseño anotado en "Ideas en reserva". El detalle está en `resultados/filtro.md`.
+
+| Horizonte | Periodo | Versión | Operaciones | Ganancia neta | t | Neta con costo doble |
+| --- | --- | --- | --- | --- | --- | --- |
+| 30 min | 2020–2024 | Calibrada | 26.661 | 0,94 bps | 1,61 | −0,51 bps |
+| 30 min | 2020–2024 | Con filtro | 40.763 | 0,21 bps | 0,47 | −1,27 bps |
+| 60 min | 2020–2024 | Calibrada | 25.272 | 2,07 bps | 2,29 | 0,37 bps |
+| 60 min | 2020–2024 | Con filtro | 38.167 | 1,17 bps | 1,58 | −0,71 bps |
+| 60 min | 2021–2024 | Calibrada | 20.698 | 0,38 bps | 0,43 | −1,33 bps |
+| 60 min | 2021–2024 | Con filtro | 23.463 | 0,36 bps | 0,46 | −1,35 bps |
+
+- **No le gana a la calibración** en ningún horizonte. Se descarta con este diseño.
+- **Aprendió a detectar volatilidad, no aciertos.** Su variable principal es el movimiento esperado frente al spread (37% a 47% del peso): con mucha volatilidad, cualquier operación tiene cerca de 50% de probabilidad de superar dos spreads, acierte o no la dirección.
+- **Distingue poco:** AUC de 0,52 a 0,55, y la probabilidad calibrada casi no sale de 48% a 52%. No sirve como entrada para Kelly.
+- **El umbral no se traslada bien de un año a otro:** elegido como el 10% más alto en un año tranquilo, en 2020 y 2022 deja pasar el 20% de las candidatas.
+- **A favor:** a 60 minutos tiene 13 de 20 trimestres positivos (la calibrada, 10) y gana en 2023. No alcanza para preferirlo.
+- Si se retoma, el filtro tendría que predecir la ganancia medida en unidades de volatilidad, no una etiqueta de sí o no. Sería otra variante.
+- Variantes probadas hasta ahora: 10. Con Bonferroni, el t exigido es 2,58.
+
+#### Revisión de la ganancia de la versión calibrada a 60 minutos
+
+Adelanto del paso 2.8, hecho el 16 de noviembre de 2026 con `residual-edge-analyzer` sobre la ganancia neta diaria de 2020–2024. Es descriptivo y no cuenta como variante. Fue un análisis exploratorio: falta dejarlo como script del proyecto.
+
+- **No es exposición al mercado:** SPY explica el 2% de la variación diaria y la beta es −0,02. Con el promedio de las 50 acciones, o sumando la referencia, la conclusión no cambia.
+- **Está concentrada en pocos días:** los 10 mejores días aportan 40.307 de los 52.234 bps de ganancia total (77%). Marzo de 2020 solo aporta 25.532.
+- **Sin esos días no queda ventaja medible:** sin los 10 mejores días da 0,48 bps por operación (t 0,65); sin 2020 da 0,38 bps (t 0,43) y −1,33 con el costo doble.
+- **Las compras ganan más que las ventas:** 4,68 bps contra 0,59, y solo el 36% de las operaciones son compras.
+- **Por acción:** 23 de 36 ganan; NVDA aporta el 28% y AAPL el 16%.
+- **Veredicto de la herramienta:** ventaja frágil, porque la ganancia es positiva en muy pocas de las ventanas de 63 días.
+- **Consecuencia:** la ganancia descansa en marzo de 2020, que es donde el costo está peor medido (el spread de AAPL ese mes era unas 5 veces el de hoy). Por eso se está midiendo el spread de cada época.
+
 #### Resultado de los pasos 2.3 y 2.4
 
 Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
@@ -211,11 +244,11 @@ Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El
 
 #### Ideas en reserva para el modelo de velas
 
-Anotadas el 16 de noviembre de 2026. Están diseñadas pero no programadas ni corridas, así que no cuentan como variantes. Son lo siguiente en el paso 2.6, en este orden.
+Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no le ganó a la calibración (ver el resultado arriba); su diseño se deja aquí como registro. Las ideas 2 a 4 están diseñadas pero no programadas ni corridas, así que no cuentan como variantes.
 
 | Idea | Qué es | Qué existe ya | Costo | Variantes que suma |
 | --- | --- | --- | --- | --- |
-| 1 · Filtro de operaciones (meta-labeling) | Un segundo modelo decide si se opera; el primero solo da la dirección | Las predicciones fuera de muestra del primero y los regímenes | Bajo: no reentrena el primero, salvo un año | 2 |
+| 1 · Filtro de operaciones (meta-labeling), **probada y descartada** | Un segundo modelo decide si se opera; el primero solo da la dirección | Las predicciones fuera de muestra del primero y los regímenes | Bajo: no reentrena el primero, salvo un año | 2 |
 | 2 · Objetivo sin mercado ni sector | El primero predice el retorno sin la parte de SPY (con la beta de cada acción) y sin la de su sector | El objetivo ya descuenta el promedio de las 50 acciones; `beta_60d` | Una corrida completa (80 minutos) | 2, junto con la idea 3 |
 | 3 · Reacción a la noticia | Variables de cuánto se movió el precio y el volumen desde la última noticia o comunicado 8-K | Conteos de noticias, `volrel_15`, hora exacta de los 8-K | Rehacer `variables.py` y la misma corrida de la idea 2 | — |
 | 4 · Sorpresa contable | Cambio de ingresos y ganancia por acción frente al mismo trimestre del año anterior | Cifras de la SEC | Aplazada: ver abajo | — |
@@ -237,7 +270,7 @@ Anotadas el 16 de noviembre de 2026. Están diseñadas pero no programadas ni co
 - **Idea 3:** variables continuas (retorno desde la noticia frente a la volatilidad esperada, volumen relativo desde la noticia, minutos desde el último 8-K), sin cortes fijos; el árbol los encuentra.
 - **Idea 4, aplazada:** las cifras estructuradas llegan tarde (ver "Limitaciones anotadas" en la sección 4). Solo serviría como variable de varios días a partir del informe trimestral, no como señal de minutos.
 
-Con las ideas 1 a 3 el total llegaría a 12 variantes. Con Bonferroni, eso sube el t exigido de 2,50 (8 variantes) a 2,64.
+Con la idea 1 ya van 10 variantes. Con las ideas 2 y 3 el total llegaría a 12, y con Bonferroni el t exigido subiría de 2,58 a 2,64.
 
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
@@ -313,7 +346,7 @@ Cada comunicado trae la hora exacta en que quedó público (verificada en UTC) y
 - **Sesgo de supervivencia:** el universo son empresas que existen hoy.
 - **LIN** tiene datos solo desde 2018, cuando empezó a cotizar con ese símbolo.
 - **Las cifras de la SEC llegan después del comunicado de resultados.** Vienen del informe trimestral (10-Q o 10-K), no del 8-K. De 1.893 comunicados de resultados de 2016 a 2024, solo en el 20% las cifras estaban disponibles ese mismo día; la mediana es 7 días después. Usarlas el día del comunicado sería usar información del futuro. Visa no reporta ganancia por acción en estos datos.
-- **No hay spread histórico:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo para toda la historia. Para tenerlo por año habría que muestrear cotizaciones de cada año con `muestrear_spread.py`.
+- **El costo usa el spread de hoy para toda la historia:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo. Alpaca sí entrega cotizaciones de años anteriores, así que `muestrear_spread.py --historico` está tomando una muestra por trimestre de 2016 a 2024 (en `datos/spread_historico`). Con eso se volverán a costear las operaciones guardadas, como prueba de sensibilidad. Adoptarlo como costo oficial cambiaría una regla de la sección 5 y está por decidir.
 - **Empresas reorganizadas:** Exxon (2026), Disney (2019) y Broadcom (2018) pasaron a una sociedad nueva y la SEC les dio otro número de registro. `descargar_sec.py` tiene una tabla con los registros anteriores; si otra empresa se reorganiza, hay que agregarla ahí.
 
 ### Pagos opcionales
@@ -390,12 +423,13 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `descargar_noticias.py` | Baja las noticias, un archivo por mes |
 | `descargar_sec.py` | Baja de la SEC el índice de comunicados 8-K, las cifras financieras y los textos. Necesita `SEC_USER_AGENT` en `.env` |
 | `actualizar.py` | Corre los cuatro scripts de descarga en orden y deja un registro por día |
-| `muestrear_spread.py` | Mide el costo de operar cada acción con cotizaciones reales de compra y venta |
+| `muestrear_spread.py` | Mide el costo de operar cada acción con cotizaciones reales de compra y venta. Con `--historico` toma una muestra por trimestre de 2016 a 2024 |
 | `barrera_costos.py` | Compara el movimiento del precio con el costo y calcula el acierto mínimo; escribe `resultados/barrera_costos.md` |
 | `variables.py` | Arma la tabla de variables y retornos futuros para los modelos, sin usar información del futuro |
 | `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
 | `modelo_velas.py` | Entrena el modelo de velas (competidor B) con validación hacia adelante y lo compara con la referencia; escribe `resultados/modelo_velas.md` |
 | `segmentos.py` | Calcula los grupos de acciones y los regímenes de mercado por ventana de validación, y mide si la señal del modelo de velas cambia según el segmento; escribe `resultados/segmentos.md` |
+| `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 

@@ -17,9 +17,16 @@ Uso:
     python muestrear_spread.py
     python muestrear_spread.py --simbolos SPY AAPL
     python muestrear_spread.py --forzar          # repite aunque ya exista
+    python muestrear_spread.py --historico       # muestra por trimestre, de 2016 a 2024
+
+Con --historico se mide el spread de años anteriores, solo en horario normal:
+8 momentos al azar por símbolo y por trimestre. Sirve para saber cuánto costaba
+operar en cada época, porque el spread cambia mucho (en marzo de 2020 fue varias
+veces el de hoy). No toma nada de la muestra final (2025 en adelante).
 
 Estructura de salida:
-    datos/spread/SIMBOLO.parquet   (una fila por momento muestreado)
+    datos/spread/SIMBOLO.parquet             (una fila por momento muestreado)
+    datos/spread_historico/SIMBOLO.parquet   (lo mismo, con --historico)
 
 Columnas: momento (UTC), franja, cotizaciones (cuántas hubo en el minuto),
 spread_bps (en centésimas de punto porcentual: 1 bps = 0,01%), spread_usd,
@@ -49,6 +56,9 @@ NY = ZoneInfo("America/New_York")
 FRANJAS = {"pre": (7 * 60, 9 * 60 + 30, 15), "sesion": (9 * 60 + 30, 16 * 60, 40), "post": (16 * 60, 18 * 60, 15)}
 DIAS = 60
 PAUSA = 0.35  # segundos entre peticiones, para no agotar el límite de Alpaca
+CARPETA_HISTORICO = RAIZ / "spread_historico"
+ANIOS_HISTORICO = range(2016, 2025)   # hasta 2024: la muestra final no se toca
+POR_TRIMESTRE = 8
 
 
 def dias_de_mercado(simbolo: str) -> list:
@@ -71,6 +81,27 @@ def momentos(simbolo: str) -> list[tuple[pd.Timestamp, str]]:
             minuto = int(azar.integers(desde, hasta - 1))
             local = pd.Timestamp(dia, tz=NY) + timedelta(minutes=minuto, seconds=int(azar.integers(60)))
             salida.append((local.tz_convert("UTC"), franja))
+    return salida
+
+
+def momentos_historicos(simbolo: str) -> list[tuple[pd.Timestamp, str]]:
+    """Momentos al azar en horario normal: POR_TRIMESTRE por cada trimestre con velas."""
+    azar = np.random.default_rng(zlib.crc32(f"{simbolo}-historico".encode()))
+    desde, hasta, _ = FRANJAS["sesion"]
+    salida = []
+    for anio in ANIOS_HISTORICO:
+        archivo = RAIZ / "minuto" / simbolo / f"{anio}.parquet"
+        if not archivo.exists():
+            continue
+        ts = pd.read_parquet(archivo, columns=["timestamp"])["timestamp"]
+        dias = pd.DatetimeIndex(sorted(ts.dt.tz_convert(NY).dt.date.unique()))
+        for trimestre in range(1, 5):
+            del_trimestre = dias[dias.quarter == trimestre]
+            for _ in range(POR_TRIMESTRE if len(del_trimestre) else 0):
+                dia = del_trimestre[azar.integers(len(del_trimestre))]
+                minuto = int(azar.integers(desde, hasta - 1))
+                local = pd.Timestamp(dia.date(), tz=NY) + timedelta(minutes=minuto, seconds=int(azar.integers(60)))
+                salida.append((local.tz_convert("UTC"), "sesion"))
     return salida
 
 
@@ -104,17 +135,19 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Muestrea el spread de cada símbolo con cotizaciones de Alpaca.")
     ap.add_argument("--simbolos", nargs="+", default=UNIVERSO, help="Lista de símbolos")
     ap.add_argument("--forzar", action="store_true", help="Repite aunque el archivo ya exista")
+    ap.add_argument("--historico", action="store_true", help="Muestra por trimestre de 2016 a 2024, en horario normal")
     args = ap.parse_args()
 
     cli = cliente()
-    CARPETA.mkdir(parents=True, exist_ok=True)
+    carpeta, elegir = (CARPETA_HISTORICO, momentos_historicos) if args.historico else (CARPETA, momentos)
+    carpeta.mkdir(parents=True, exist_ok=True)
     fallos = []
     for i, simbolo in enumerate(args.simbolos, 1):
-        archivo = CARPETA / f"{simbolo}.parquet"
+        archivo = carpeta / f"{simbolo}.parquet"
         if archivo.exists() and not args.forzar:
             continue
         filas, incompleto = [], False
-        for momento, franja in momentos(simbolo):
+        for momento, franja in elegir(simbolo):
             time.sleep(PAUSA)
             m = medir(cli, simbolo, momento)
             if m is None:
@@ -129,10 +162,14 @@ def main() -> None:
         temporal = archivo.with_suffix(".parquet.tmp")
         df.to_parquet(temporal, index=False)
         temporal.replace(archivo)
-        med = df.groupby("franja")["spread_bps"].median()
-        print(f"[{i}/{len(args.simbolos)}] {simbolo}: " + " | ".join(f"{f} {med.get(f, np.nan):.1f} bps" for f in FRANJAS))
+        if args.historico:
+            med = df.groupby(df["momento"].dt.year)["spread_bps"].median()
+            print(f"[{i}/{len(args.simbolos)}] {simbolo}: " + " | ".join(f"{a} {x:.1f}" for a, x in med.items()) + " bps", flush=True)
+        else:
+            med = df.groupby("franja")["spread_bps"].median()
+            print(f"[{i}/{len(args.simbolos)}] {simbolo}: " + " | ".join(f"{f} {med.get(f, np.nan):.1f} bps" for f in FRANJAS))
 
-    print(f"\nListo. Muestras de spread en {CARPETA}")
+    print(f"\nListo. Muestras de spread en {carpeta}")
     if fallos:
         sys.exit(f"Fallaron {len(fallos)} símbolos (volver a correr): {', '.join(fallos)}")
 

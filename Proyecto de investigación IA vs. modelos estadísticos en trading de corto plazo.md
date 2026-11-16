@@ -626,6 +626,13 @@ Las métricas y el umbral de éxito se fijan por escrito antes de ver resultados
 
 Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
 
+**Cómo se evalúa B en la muestra final, fijado el 16 de noviembre de 2026 antes de abrirla:**
+- **Modelo:** el de `modelo_final.py` (entrenado con 2016–2024, pendiente 0,782), sin reentrenar ni tocar nada. Variante 12: decisiones de 10:00 a 12:30, entrada 20 minutos después, salida a las 15:55, una operación por acción y día, 36 acciones.
+- **Periodo:** del 2 de enero de 2025 al último día completo disponible el día que se abra, sin medios días.
+- **Costo:** el oficial (spread de la época). Las medianas trimestrales de 2025–2026 salen de `datos/spread_reciente`; la elasticidad del spread a la volatilidad se toma de 2016–2024, sin reestimarla. Decide con el trimestre anterior y paga el del trimestre en curso. El control de los bordes se reporta aparte, como información.
+- **Referencia (criterio 2):** la de 60 minutos, con las mismas operaciones de sus reglas fijas y el costo de la época, como en `comparaciones.py`. La diferencia se mide sobre la ganancia neta diaria por acción operable, con el t por bloques (una cola, 5%: t ≥ 1,65).
+- **Se usa una sola vez.** El script no muestra nada de 2025 en adelante sin una orden explícita (`--abrir`). Lo que salga se reporta tal cual.
+
 **Fase 3: H0 se rechaza si, en vivo, IA + velas (D) cumple todo esto**
 
 1. Ganancia neta diaria mayor que la del modelo de velas (B), con significancia, sobre los mismos días.

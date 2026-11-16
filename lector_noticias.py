@@ -456,23 +456,31 @@ def _ahora_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
-def procesar_noticia(con, modelo: Modelo, fila, horizonte: int = HORIZONTE_DEFECTO) -> dict:
+MAX_INTENTOS = 6    # tope de intentos por noticia, contando los reintentos tardíos
+
+
+def procesar_noticia(con, modelo: Modelo, fila, horizonte: int = HORIZONTE_DEFECTO, reintento_tardio: bool = False) -> dict:
     """Envía, mide, valida, reintenta una vez y registra. Devuelve un dict con `estado`:
-    'omitida', 'repetida', 'primer_intento', 'reintento' o 'sin_respuesta'."""
+    'omitida', 'repetida', 'primer_intento', 'reintento' o 'sin_respuesta'.
+
+    Con reintento_tardio=True, una noticia ya enviada que no tiene ninguna respuesta válida se
+    vuelve a intentar (dos intentos más, numerados a continuación), hasta MAX_INTENTOS en total.
+    Sirve para no perder noticias cuando la API falla un rato. Cada respuesta cuenta desde que llega."""
     entrada, simbolos, motivo = armar_entrada(fila)
     if entrada is None:
         return {"estado": "omitida", "motivo": motivo, "caracteres": 0}
     version = pd.Timestamp(fila["updated_at"]).isoformat()
     clave = (int(fila["id"]), version, modelo.nombre, VERSION_INSTRUCCIONES)
-    if con.execute("SELECT 1 FROM respuestas_ia WHERE noticia=? AND version_noticia=? AND modelo=? "
-                   "AND version_instrucciones=? LIMIT 1", clave).fetchone():
+    previos, validos = con.execute("SELECT COUNT(*), COALESCE(SUM(valido), 0) FROM respuestas_ia WHERE noticia=? "
+                                   "AND version_noticia=? AND modelo=? AND version_instrucciones=?", clave).fetchone()
+    if previos and (validos or not reintento_tardio or previos >= MAX_INTENTOS):
         return {"estado": "repetida", "caracteres": len(entrada)}
     con.execute("INSERT OR IGNORE INTO noticias VALUES (?,?,?,?,?,?)",
                 (int(fila["id"]), version, pd.Timestamp(fila["created_at"]).tz_convert(NY).isoformat(),
                  fila["source"], fila["headline"], ",".join(simbolos)))
     texto_instr = instrucciones(horizonte)
     estado = "sin_respuesta"
-    for intento in (1, 2):
+    for intento in (previos + 1, previos + 2):
         enviada = _ahora_utc()
         t0 = time.perf_counter()
         texto, tok_in, tok_out = modelo.responder(texto_instr, entrada)
@@ -620,6 +628,12 @@ def probar() -> None:
     fila["id"] = 2
     assert procesar_noticia(con, ModeloSimulado(0.0), fila)["estado"] == "primer_intento"
     assert procesar_noticia(con, ModeloSimulado(0.0), fila)["estado"] == "repetida"
+    # reintento tardío: la noticia 1 quedó sin respuesta; sin la opción no se repite, con ella sí
+    fila["id"] = 1
+    assert procesar_noticia(con, ModeloSimulado(0.0), fila)["estado"] == "repetida"
+    assert procesar_noticia(con, ModeloSimulado(0.0), fila, reintento_tardio=True)["estado"] == "reintento"
+    assert con.execute("SELECT MAX(intento) FROM respuestas_ia WHERE noticia=1").fetchone()[0] == 3
+    assert procesar_noticia(con, ModeloSimulado(0.0), fila, reintento_tardio=True)["estado"] == "repetida"   # ya tiene válida
     print("Pruebas de validación y proceso: OK")
 
 

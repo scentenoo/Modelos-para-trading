@@ -86,6 +86,8 @@ from descargar_noticias import COLUMNAS
 
 INTERVALO_DEFECTO = 60
 SOLAPE_MIN = 5
+REINTENTO_HORAS = 2      # cuánto tiempo se reintenta una noticia que quedó sin respuesta
+PENDIENTES: dict = {}    # (id, version) -> (fila, hora en que quedó sin respuesta); se pierde si el proceso se reinicia
 VENTANA_INICIAL_MIN = 10
 PRECIO_ENTRADA = 0.10 / 1e6      # dólares por token de entrada (Haiku 5.5)
 PRECIO_SALIDA = 0.50 / 1e6       # dólares por token de salida
@@ -159,7 +161,7 @@ def crear_consulta():
 def ciclo(con, modelo, consulta, inicio: datetime, horizonte: int) -> tuple[bool, dict]:
     """Una consulta + procesamiento. Devuelve (consulta_ok, estadísticas). No lanza excepciones."""
     est = {"consultas": 1, "traidas": 0, "nuevas": 0, "omitidas": 0, "procesadas": 0, "validas": 0,
-           "sin_respuesta": 0, "errores": 0}
+           "sin_respuesta": 0, "errores": 0, "reintentos_ok": 0}
     t_inicio = _iso(_ahora())
     try:
         df = consulta(UNIVERSO, inicio, _ahora())
@@ -188,6 +190,7 @@ def ciclo(con, modelo, consulta, inicio: datetime, horizonte: int) -> tuple[bool
                 est["procesadas"] += 1
                 if r["estado"] == "sin_respuesta":
                     est["sin_respuesta"] += 1
+                    PENDIENTES[(int(fila["id"]), version)] = (fila, _ahora())
                 else:
                     est["validas"] += 1
         except Exception as e:  # noqa: BLE001
@@ -198,13 +201,32 @@ def ciclo(con, modelo, consulta, inicio: datetime, horizonte: int) -> tuple[bool
                 con.rollback()
             except sqlite3.Error:
                 pass
+    # Reintento tardío: las que quedaron sin respuesta (por ejemplo, la API cayó un rato) se reintentan
+    # en las vueltas siguientes durante REINTENTO_HORAS, hasta ln.MAX_INTENTOS intentos en total.
+    limite = _ahora() - timedelta(hours=REINTENTO_HORAS)
+    for clave, (fila, desde) in list(PENDIENTES.items()):
+        if desde < limite:
+            PENDIENTES.pop(clave)
+            continue
+        if _iso(desde) >= t_inicio:                    # quedó sin respuesta en esta misma vuelta: se espera a la siguiente
+            continue
+        try:
+            r = ln.procesar_noticia(con, modelo, fila, horizonte, reintento_tardio=True)
+            if r["estado"] in ("primer_intento", "reintento"):
+                est["reintentos_ok"] += 1
+                PENDIENTES.pop(clave)
+            elif r["estado"] == "repetida":            # ya tiene respuesta válida o agotó los intentos
+                PENDIENTES.pop(clave)
+        except Exception as e:  # noqa: BLE001
+            est["errores"] += 1
+            log.error("noticia %s: error en el reintento (%s: %s)", clave[0], type(e).__name__, e)
     lat = con.execute("SELECT COUNT(*), AVG(latencia_ms), MAX(latencia_ms), COALESCE(SUM(tokens_entrada),0), "
                       "COALESCE(SUM(tokens_salida),0) FROM respuestas_ia WHERE enviada_utc >= ?", (t_inicio,)).fetchone()
     est["intentos"], est["lat_media"], est["lat_max"], est["tok_in"], est["tok_out"] = lat
     log.info("consultas=%d traidas=%d nuevas=%d omitidas=%d procesadas=%d validas=%d sin_respuesta=%d errores=%d "
-             "intentos=%d latencia_media_ms=%s latencia_max_ms=%s tokens_entrada=%d tokens_salida=%d",
+             "reintentos_ok=%d pendientes=%d intentos=%d latencia_media_ms=%s latencia_max_ms=%s tokens_entrada=%d tokens_salida=%d",
              est["consultas"], est["traidas"], est["nuevas"], est["omitidas"], est["procesadas"], est["validas"],
-             est["sin_respuesta"], est["errores"], est["intentos"],
+             est["sin_respuesta"], est["errores"], est["reintentos_ok"], len(PENDIENTES), est["intentos"],
              "-" if est["lat_media"] is None else round(est["lat_media"]), est["lat_max"] if est["lat_max"] is not None else "-",
              est["tok_in"], est["tok_out"])
     return True, est

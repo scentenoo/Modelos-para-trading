@@ -3,7 +3,7 @@ Comparaciones múltiples: ¿alguna variante gana de verdad, o es la mejor de muc
 
 Cuando se prueban varias variantes y se mira la mejor, su resultado sale inflado.
 Aquí se toma la ganancia neta diaria de todas las variantes probadas del modelo
-de velas y se corrige de tres maneras (criterios, sección 5 del documento):
+de velas, todas con el costo de la época, y se corrige de tres maneras (criterios, sección 5 del documento):
 
   - Bonferroni: el valor p de cada variante se multiplica por el número de variantes.
   - Holm: igual de estricto con la mejor y algo menos con las siguientes.
@@ -19,6 +19,10 @@ Dos bases: no operar (ganancia cero) y la referencia (competidor A).
 Todas las variantes se miden en los mismos días (desde 2020, el primer año que
 tienen todas). Un día sin operaciones cuenta como ganancia cero. Cada variante
 nueva que se pruebe debe agregarse a VARIANTES, también si se descarta.
+
+Costo: todas las variantes usan el costo de la época (recostear.py; se escriben con
+recostear_variantes.py en operaciones_epoca_{h}.parquet), igual que la variante hasta el
+cierre y la referencia.
 
 Muestra final: las operaciones guardadas no la incluyen.
 
@@ -43,13 +47,13 @@ REMUESTREOS = 10_000
 BLOQUE = 10             # largo medio de los bloques del remuestreo, en días
 SEMILLA = 7
 # (nombre, archivo en datos/modelos, modelo dentro del archivo o None, horizonte)
-VARIANTES = [(f"{nombre}, {h} min", archivo.format(h=h), modelo, h)
+VARIANTES = [(f"{nombre}, {h} min", "operaciones_epoca_{h}".format(h=h), modelo, h)
              for h in referencia.HORIZONTES
-             for nombre, archivo, modelo in [("Regresión logística", "operaciones_{h}", "logit"),
-                                             ("LightGBM v1", "operaciones_{h}", "lgbm"),
-                                             ("LightGBM v2", "operaciones_{h}", "lgbm2"),
-                                             ("LightGBM v2 calibrado", "operaciones_calibradas_{h}", None),
-                                             ("LightGBM v2 con filtro", "operaciones_filtro_{h}", None)]]
+             for nombre, modelo in [("Regresión logística", "logit"),
+                                    ("LightGBM v1", "lgbm"),
+                                    ("LightGBM v2", "lgbm2"),
+                                    ("LightGBM v2 calibrado", "lgbm2c"),
+                                    ("LightGBM v2 con filtro", "filtro")]]
 # Idea 5: salida a las 15:55; se compara con la referencia de 60 minutos.
 VARIANTES.append(("LightGBM v2 calibrado, hasta el cierre", "operaciones_cierre", None, 60))
 
@@ -65,7 +69,7 @@ def series_diarias() -> tuple[pd.DataFrame, pd.DataFrame]:
         o = pd.read_parquet(MODELOS / f"{archivo}.parquet")
         if modelo is not None:
             o = o[o["modelo"] == modelo]
-        ref = pd.read_parquet(referencia.CARPETA / f"operaciones_{h}.parquet")
+        ref = pd.read_parquet(referencia.CARPETA / f"operaciones_epoca_{h}.parquet")
         n = int(universo[h].sum())
         b[nombre] = (o.groupby("dia")["neto_bps"].sum() / n).reindex(dias, fill_value=0.0)
         a[nombre] = (ref.groupby("dia")["neto_bps"].sum() / n).reindex(dias, fill_value=0.0)
@@ -123,7 +127,7 @@ def main() -> None:
     L = ["# Comparaciones múltiples del modelo de velas", "",
          f"Generado el {pd.Timestamp.now():%Y-%m-%d} con `comparaciones.py`. {b.shape[1]} variantes, {len(b)} días ({b.index.min():%Y-%m-%d} a {b.index.max():%Y-%m-%d}), "
          f"{num(REMUESTREOS, 0)} remuestreos por bloques de {BLOQUE} días en promedio. No incluye la muestra final.", "",
-         "La ganancia diaria está en bps por acción operable. El t se calcula con el remuestreo por bloques, así que puede diferir un poco del de los otros informes. "
+         "La ganancia diaria está en bps por acción operable, con el costo de la época en todas las variantes. El t se calcula con el remuestreo por bloques, así que puede diferir un poco del de los otros informes. "
          "Pruebas de una cola: un valor p menor que 0,05 indica que la ganancia se distingue de la base.", "",
          "## Contra no operar (ganancia cero)", "", *tabla(b, contra_cero),
          "## Contra la referencia (competidor A)", "", *tabla(b, contra_a)]

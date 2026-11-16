@@ -314,6 +314,27 @@ Hecho con `horizonte_largo.py` el 16 de noviembre de 2026, con el diseño fijado
 - **Lectura:** alargar el horizonte es la dirección correcta: el modelo predice una deriva del día, y a 15:55 la selección pesa más que el costo. Pero la ventaja todavía no se distingue del azar después de corregir por las variantes probadas, y sin 2020 se debilita.
 - Variantes probadas hasta ahora: 11.
 
+**Todas las variantes con el costo de la época.** `recostear_variantes.py` volvió a costear las otras 10 variantes y la referencia: las que deciden con el costo (logit, v1, v2 y calibrada) vuelven a decidir con el spread del trimestre anterior; el filtro y la referencia mantienen sus operaciones. Las cifras coinciden con `resultados/costo_historico.md`. Con eso `comparaciones.py` da SPA de Hansen p = 0,078 contra no operar (antes 0,083). La de hasta el cierre sigue siendo la mejor (p = 0,011 sin corregir, 0,117 con Bonferroni); la segunda, la calibrada a 60 minutos, baja a t 1,15. Contra la referencia todas siguen ganando.
+
+#### Revisión contra el sobreajuste de la idea 5 (paso 2.8)
+
+Hecha con `revision_cierre.py` el 16 de noviembre de 2026, sobre lo guardado por `horizonte_largo.py`, con la lista de `backtest-expert` y `residual-edge-analyzer`. Es descriptiva, no cuenta como variante y ninguna versión de aquí se adopta. El detalle está en `resultados/revision_cierre.md`.
+
+| Prueba | Resultado |
+| --- | --- |
+| Umbral de entrada (k veces el costo esperado, de 0,5 a 2) | Meseta: t entre 2,26 y 2,30 de k = 0,75 a 1,5. Con k = 0,5 baja a 1,71; con k = 2 sube a 2,83 (5,00 bps netos) |
+| Hora de salida, mismas operaciones | 14:55: 1,75 bps (t 1,66); 15:25: 1,73 (1,65); 15:40: 2,07 (1,95); 15:55: 2,87 (2,30) |
+| Costo 1,5 y 2 veces el de la época | 1,72 bps (t 1,40) y 0,57 (t 0,47) |
+| Mercado (`residual-edge-analyzer`) | Ventaja propia: beta 0,008 frente a SPY, R² 0,1%, 71% de las ventanas de 63 días positivas |
+| Concentración | Los 10 mejores días aportan el 64%; sin ellos, 1,03 bps (t 0,95). NVDA, TSLA y AMD aportan el 47% |
+| Por régimen | Gana en tres de cuatro; pierde en el régimen 3 (−4,47% anual) |
+| Evaluador de `backtest-expert` | REFINAR, 67 de 100: muestra y realismo de ejecución completos; la expectativa por operación (0,028%, factor de ganancia 1,06) es la parte débil |
+
+- **El umbral no está sobreajustado:** el resultado se mantiene parejo alrededor del valor elegido. Que k = 2 dé más es una pista para una prueba nueva, no algo que se pueda adoptar ahora.
+- **Más de una quinta parte de la ganancia bruta llega en la última media hora:** saliendo a las 15:25 la bruta es 4,03 bps y a las 15:55, 5,16. Es coherente con el impulso intradía documentado (la primera media hora predice la última, uno de los efectos de la referencia), pero hace que el resultado dependa de poder salir cerca del cierre, donde el spread puede ser distinto del medido en horario normal.
+- **No es exposición al mercado,** pero sí depende de pocos días (marzo de 2020 y febrero de 2022) y de las acciones más volátiles.
+- **Conclusión:** la idea 5 es la mejor base para B y su señal es real (la selección tiene t 4,73), pero el margen después de costos es fino: con un costo 50% mayor el t baja a 1,40. Antes de la muestra final hace falta saber cuánto cuesta salir a las 15:55.
+
 #### Resultado de los pasos 2.3 y 2.4
 
 Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
@@ -570,6 +591,8 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `comparaciones.py` | Corrige por el número de variantes probadas (Bonferroni, Holm y SPA de Hansen con remuestreo por bloques); escribe `resultados/comparaciones.md` |
 | `recostear.py` | Vuelve a costear las operaciones guardadas con el spread del trimestre en que ocurrieron, corregido por la volatilidad del día; escribe `resultados/costo_historico.md` |
 | `horizonte_largo.py` | Idea 5: modelo de velas con salida a las 15:55, seis decisiones al día y costo de la época; escribe `resultados/horizonte_largo.md`. Con `--rapido` prueba solo 2024 |
+| `recostear_variantes.py` | Guarda las operaciones de las 10 variantes anteriores y de la referencia con el costo de la época (`operaciones_epoca_<h>.parquet`), que usa `comparaciones.py` |
+| `revision_cierre.py` | Revisión contra el sobreajuste de la idea 5: umbral, hora de salida, costo, mercado y concentración; escribe `resultados/revision_cierre.md` |
 | `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Por ahora solo con un modelo simulado |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |

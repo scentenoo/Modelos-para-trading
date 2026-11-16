@@ -28,6 +28,7 @@ Muestra final: no se usa nada desde referencia.CORTE (criterios, paso 0.4).
 
 Uso:
     python horizonte_largo.py
+    python horizonte_largo.py --retraso 20 # variante 12: entra 20 minutos después
     python horizonte_largo.py --rapido     # solo el año de prueba 2024, sin calibrar; escribe en la carpeta temporal
 
 Salida:
@@ -60,15 +61,16 @@ CALIBRADO = "lgbm2c"
 NOMBRE = "lgbm2_cierre"
 DESDE = 2020
 BASE_CONOCIDA = "1,00 bps (t 1,40 por días)"
+BASE_RETRASO = "2,87 bps (t por bloques 2,30)"
 
 
-def retorno(t: pd.DataFrame, p: dict, salida) -> np.ndarray:
-    """log(C[salida] / C[entrada]) de cada fila, con los mismos precios y huecos que referencia.py (NaN si falta alguno)."""
+def retorno(t: pd.DataFrame, p: dict, salida, entrada=None) -> np.ndarray:
+    """log(C[salida] / C[entrada]) de cada fila (entrada por defecto: el minuto de la fila), con los mismos precios y huecos que referencia.py (NaN si falta alguno)."""
     s = pd.Index(UNIVERSO).get_indexer(t["symbol"])
     d = pd.DatetimeIndex(p["dias"]).get_indexer(t["dia"])
-    entrada = t["minuto"].to_numpy()
+    entrada = t["minuto"].to_numpy() if entrada is None else np.asarray(entrada)
     salida = np.broadcast_to(np.asarray(salida), entrada.shape)
-    dentro = (salida < variables.MINUTOS) & (s >= 0) & (d >= 0)
+    dentro = (salida < variables.MINUTOS) & (entrada < variables.MINUTOS) & (s >= 0) & (d >= 0)
     C = p["C"]
     with np.errstate(invalid="ignore", divide="ignore"):
         r = np.log(C[s, d, np.where(dentro, salida, 0)].astype("float64") / C[s, d, entrada].astype("float64"))
@@ -109,14 +111,14 @@ def validar(t: pd.DataFrame, columnas: list[str], y: np.ndarray, primer_anio: in
     return pd.concat(partes, ignore_index=True), elecciones
 
 
-def operar(pred: pd.DataFrame, columna: str, operables: set, costo) -> pd.DataFrame:
+def operar(pred: pd.DataFrame, columna: str, operables: set, costo, retraso: int = 0) -> pd.DataFrame:
     """Opera si |predicción| supera el costo esperado; una operación por acción y día, la del primer momento. Sale a las 15:55."""
     x = pred[pred["symbol"].isin(operables) & pred["minuto"].isin(MOMENTOS)].sort_values(["dia", "minuto", "symbol"])
     entra = np.abs(x[columna].values) > costo(x, atras=1)
     x = x[entra].drop_duplicates(["symbol", "dia"], keep="first")
     paga = costo(x)
     direccion = np.sign(x[columna].values)
-    o = pd.DataFrame({"modelo": NOMBRE, "symbol": x["symbol"].values, "dia": x["dia"].values, "entrada": x["minuto"].values,
+    o = pd.DataFrame({"modelo": NOMBRE, "symbol": x["symbol"].values, "dia": x["dia"].values, "entrada": x["minuto"].values + retraso,
                       "salida": SALIDA_MAXIMA, "direccion": direccion.astype("int8"), "esperado_bps": np.abs(x[columna].values),
                       "bruto_bps": direccion * x["obj_bps"].values, "costo_bps": paga})
     o["neto_bps"] = o["bruto_bps"] - o["costo_bps"]
@@ -145,12 +147,13 @@ def t_dias(valor: pd.Series, dia: pd.Series) -> float:
 
 
 def informe(pred: pd.DataFrame, o: pd.DataFrame, dias: pd.DatetimeIndex, pendientes: dict, elecciones: dict, n_operables: int,
-            comprobacion: tuple, desde: int, rapido: bool, tiempo: float) -> str:
+            comprobacion: tuple, desde: int, rapido: bool, tiempo: float, retraso: int = 0) -> str:
     s, doble = resumen(o), resumen(o, 2.0)
     serie, serie_doble = serie_diaria(o, dias), serie_diaria(o, dias, 2.0)
     ic, t_ic = mv.orden_acertado(pred, MODELO)
     ultimo = int(pred["dia"].dt.year.max())
-    L = ["# Horizonte hasta el cierre (idea 5)", "",
+    titulo = f"# Horizonte hasta el cierre (idea 5), entrada retrasada {retraso} minutos (variante 12)" if retraso else "# Horizonte hasta el cierre (idea 5)"
+    L = [titulo, "",
          f"Generado el {pd.Timestamp.now():%Y-%m-%d} con `horizonte_largo.py`. Validación hacia adelante: cada año de {int(pred['dia'].dt.year.min())} a {ultimo} se "
          f"predice con un modelo entrenado solo con los años anteriores. Comparación de {desde} a {ultimo}. No incluye la muestra final."
          + (" **Corrida rápida (`--rapido`): solo el año de prueba 2024 y sin calibrar; no son los resultados oficiales.**" if rapido else ""), "",
@@ -159,8 +162,11 @@ def informe(pred: pd.DataFrame, o: pd.DataFrame, dias: pd.DatetimeIndex, pendien
          f"Costo: el spread de la época, un spread completo por operación. {n_operables} acciones operables (las de 60 minutos). Sin cobertura.", "",
          f"Comprobación del objetivo: con la misma función, el retorno a 60 minutos coincide con `obj_60` guardado (diferencia máxima {num(comprobacion[0], 6)} bps "
          f"en {num(comprobacion[1], 0)} filas).", "",
-         f"Base de comparación conocida: la calibrada a 60 minutos con costo de la época, volviendo a decidir, dio {BASE_CONOCIDA}.", "",
-         "Variantes probadas hasta ahora: 11 (t exigido con Bonferroni 2,61).", "",
+         (f"Entrada retrasada {retraso} minutos: el modelo decide en los mismos momentos y con las mismas variables, pero entra en el minuto k + {retraso} "
+          f"y el objetivo es el retorno desde esa entrada hasta las 15:55, menos el promedio de las acciones. "
+          f"Base de comparación conocida: la idea 5 sin retraso, {BASE_RETRASO}." if retraso else
+          f"Base de comparación conocida: la calibrada a 60 minutos con costo de la época, volviendo a decidir, dio {BASE_CONOCIDA}."), "",
+         "Variantes probadas hasta ahora: " + ("12 (t exigido con Bonferroni 2,64)." if retraso else "11 (t exigido con Bonferroni 2,61)."), "",
          "## Resultado", "",
          "| Operaciones | Días con operaciones | Acierto | Ganancia bruta | Costo | Ganancia neta | t por días | t por bloques | Neta con costo doble | t por bloques (doble) |",
          "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
@@ -191,8 +197,8 @@ def informe(pred: pd.DataFrame, o: pd.DataFrame, dias: pd.DatetimeIndex, pendien
           f"{num(ic, 4)} (t {num(t_ic, 2)}).", "",
           "## Operaciones por momento de entrada", "", "| Entrada | Operaciones | Neta por operación |", "| --- | --- | --- |"]
     for m in MOMENTOS:
-        x = o[o["entrada"] == m]
-        L.append(f"| {(570 + m) // 60}:{(570 + m) % 60:02d} | {num(len(x), 0)} | {num(x['neto_bps'].mean(), 2)} |")
+        x = o[o["entrada"] == m + retraso]
+        L.append(f"| {(570 + m + retraso) // 60}:{(570 + m + retraso) % 60:02d} | {num(len(x), 0)} | {num(x['neto_bps'].mean(), 2)} |")
     L += ["", f"Tiempo de la corrida: {tiempo / 60:.1f} minutos.", ""]
     return "\n".join(L)
 
@@ -200,7 +206,10 @@ def informe(pred: pd.DataFrame, o: pd.DataFrame, dias: pd.DatetimeIndex, pendien
 def main() -> None:
     ap = argparse.ArgumentParser(description="Idea 5: modelo de velas con salida a las 15:55.")
     ap.add_argument("--rapido", action="store_true", help="Solo el año de prueba 2024, sin calibrar; escribe en la carpeta temporal")
+    ap.add_argument("--retraso", type=int, default=0, help="Minutos de retraso de la entrada (variante 12); por defecto 0")
     args = ap.parse_args()
+    retraso = args.retraso
+    sufijo = f"_retraso{retraso}" if retraso else ""
     inicio = time.time()
 
     t, base, columnas = mv.cargar()
@@ -208,7 +217,7 @@ def main() -> None:
     comprobacion = comprobar_obj_60(t, p)
 
     t = t[t["minuto"].isin(MOMENTOS)].reset_index(drop=True)
-    t["obj_cierre"] = retorno(t, p, SALIDA_MAXIMA)
+    t["obj_cierre"] = retorno(t, p, SALIDA_MAXIMA, t["minuto"].to_numpy() + retraso)
     t["rel_cierre"] = relativo(t, t["obj_cierre"].to_numpy())
     t = t[np.isfinite(t["obj_cierre"]) & np.isfinite(t["rel_cierre"])].reset_index(drop=True)
     y = (t["rel_cierre"] * 1e4).to_numpy()
@@ -231,20 +240,20 @@ def main() -> None:
         print("Sin años de prueba anteriores: no se calibra (pendiente 1).")
         pred[CALIBRADO] = pred[MODELO]
     desde = min(pendientes) if pendientes else primer
-    o = operar(pred, CALIBRADO, operables, costo)
+    o = operar(pred, CALIBRADO, operables, costo, retraso)
 
     salida = Path(tempfile.gettempdir()) / "horizonte_largo_rapido" if args.rapido else None
     if salida is not None:
         salida.mkdir(parents=True, exist_ok=True)
     carpeta_datos, carpeta_informe = (salida, salida) if args.rapido else (mv.CARPETA, RESULTADOS)
     carpeta_datos.mkdir(parents=True, exist_ok=True)
-    pred.to_parquet(carpeta_datos / "predicciones_cierre.parquet", index=False)
-    o.to_parquet(carpeta_datos / "operaciones_cierre.parquet", index=False)
+    pred.to_parquet(carpeta_datos / f"predicciones_cierre{sufijo}.parquet", index=False)
+    o.to_parquet(carpeta_datos / f"operaciones_cierre{sufijo}.parquet", index=False)
 
     dias = pd.DatetimeIndex(p["dias"])
     dias = dias[(dias.year >= desde) & (dias < CORTE) & ~p["medio_dia"]]
-    texto = informe(pred, o, dias, pendientes, elecciones, len(operables), comprobacion, desde, args.rapido, time.time() - inicio)
-    (carpeta_informe / "horizonte_largo.md").write_text(texto, encoding="utf-8")
+    texto = informe(pred, o, dias, pendientes, elecciones, len(operables), comprobacion, desde, args.rapido, time.time() - inicio, retraso)
+    (carpeta_informe / f"horizonte_largo{sufijo}.md").write_text(texto, encoding="utf-8")
     print(f"Escrito en {carpeta_informe}")
     print(texto)
 

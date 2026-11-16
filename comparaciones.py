@@ -56,6 +56,7 @@ VARIANTES = [(f"{nombre}, {h} min", "operaciones_epoca_{h}".format(h=h), modelo,
                                     ("LightGBM v2 con filtro", "filtro")]]
 # Idea 5: salida a las 15:55; se compara con la referencia de 60 minutos.
 VARIANTES.append(("LightGBM v2 calibrado, hasta el cierre", "operaciones_cierre", None, 60))
+VARIANTES.append(("LightGBM v2 calibrado, hasta el cierre, entrada 20 min después", "operaciones_cierre_retraso20", None, 60))
 
 
 def series_diarias() -> tuple[pd.DataFrame, pd.DataFrame]:

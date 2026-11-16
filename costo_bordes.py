@@ -179,9 +179,10 @@ def informe(o, ops, R, m, faltan_ops, sin_muestras, dias) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Idea 5: control del costo en los bordes.")
     ap.add_argument("--probar", action="store_true", help="Solo las pruebas internas, sin escribir el informe")
+    ap.add_argument("--operaciones", default="operaciones_cierre", help="Archivo en datos/modelos (por ejemplo operaciones_cierre_retraso20)")
     args = ap.parse_args()
 
-    o = pd.read_parquet(CARPETA_OPERACIONES / "operaciones_cierre.parquet")
+    o = pd.read_parquet(CARPETA_OPERACIONES / f"{args.operaciones}.parquet")
     o = o[o["dia"] < CORTE].reset_index(drop=True)
     p = referencia.cargar_precios()
     rv = recostear.volatilidad_diaria()
@@ -209,7 +210,10 @@ def main() -> None:
     dias = pd.DatetimeIndex(p["dias"])
     dias = dias[(dias.year >= hl.DESDE) & (dias < CORTE) & ~p["medio_dia"]]
     texto = informe(o, ops, R, m, faltan_ops, sin_muestras, dias)
-    (RESULTADOS / "costo_bordes.md").write_text(texto, encoding="utf-8")
+    sufijo = args.operaciones.removeprefix("operaciones_cierre")
+    if sufijo:
+        texto = texto.replace("\n", f"\n\nOperaciones: `datos/modelos/{args.operaciones}.parquet`.\n", 1)
+    (RESULTADOS / f"costo_bordes{sufijo}.md").write_text(texto, encoding="utf-8")
     print(texto)
 
 

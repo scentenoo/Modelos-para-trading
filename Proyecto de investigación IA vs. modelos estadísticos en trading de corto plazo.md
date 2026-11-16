@@ -467,6 +467,19 @@ Las funciones de `variables.py` solo usan información anterior al momento de de
 - **Cuenta como variante:** con ella van 12 (t exigido con Bonferroni 2,64). Se agrega a `comparaciones.py` aunque se descarte.
 - **Regla de decisión:** si la ganancia neta sigue positiva con t por bloques de al menos 1,65, se opera en vivo con el plan gratuito y entrada retrasada. Si no, se paga el plan en tiempo real y se opera la idea 5 sin retraso. En los dos casos se aplica el control del costo en los bordes.
 - **Lo que se espera:** el modelo predice una deriva del día, así que perder los primeros 20 minutos debería costar poco; las entradas de las 10:00 eran las más rentables, así que puede costar más de lo esperado.
+
+**Resultado de la variante 12** (`horizonte_largo.py --retraso 20`, 16 de noviembre de 2026; detalle en `resultados/horizonte_largo_retraso20.md`):
+
+| Versión | Operaciones | Costo | Ganancia neta | t por bloques | Neta con costo doble | Sin 2020 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Idea 5, sin retraso | 33.692 | 2,29 bps | 2,87 bps | 2,30 | 0,57 bps | 1,24 bps (t 1,03) |
+| Entrada 20 minutos después | 23.932 | 2,15 bps | 3,07 bps | 2,15 | 0,92 bps | 0,74 bps (t 0,54) |
+
+- **Pasa la regla de decisión** (neta positiva, t por bloques 2,15 ≥ 1,65): se puede operar en vivo con el plan gratuito, sujeto al control del costo en los bordes. Retrasar la entrada no borra la señal: la ganancia por operación es parecida y la selección sigue fuerte (3,54 bps, t 3,83).
+- **No pasa la corrección por variantes:** con 12, el t exigido es 2,64 (p = 0,190 con Bonferroni). El SPA de Hansen de las 12 da p = 0,082.
+- **Opera menos y depende más de 2020:** 29% menos operaciones; 2020 da 11,69 bps por operación, 2023 da −0,16 y 2024, −2,32 (con 2.147 operaciones). Sin 2020 queda en 0,74 bps (t 0,54).
+- **La entrada de las 10:20 concentra casi todo:** 17.118 operaciones con 4,29 bps netos; las demás suman unas 6.800.
+- **Señal de alerta para la muestra final:** con y sin retraso, 2023 y 2024 son los años más flojos. Si la ventaja se está gastando, 2025 en adelante lo va a mostrar.
 2. **Una función de variables en vivo** que reproduzca `variables.py` con las velas hasta el momento de decisión: la misma regla de relleno, el mismo tipo de número (float32) y las 50 acciones completas antes de calcular los puestos (`p_*`) y las diferencias con el sector (`s_*`). Se prueba contra la tabla histórica de días pasados.
 3. **Ajustes de precio al día antes de la apertura.** Hoy `descargar_ajustes.py` corre de noche y filtra por fecha de pago; el día de un split o de un dividendo, sin la tabla al día, `ret_noche` y las variables de varios días quedan con un salto falso.
 4. **Guardar el modelo entrenado.** Hoy solo se guardan las predicciones. Falta guardar el LightGBM entrenado con 2016–2024, el orden de las columnas, la codificación del sector y una pendiente de calibración fija, con la regla de qué años la calculan escrita antes de correr.

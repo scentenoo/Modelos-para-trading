@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 15 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1) y las variables están construidas (paso 2.2); sigue programar la referencia (paso 2.5).
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1) las variables están construidas (paso 2.2) y la referencia está programada (paso 2.5); sigue entrenar el modelo de velas (paso 2.6). Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -62,9 +62,9 @@ Cada fase avanza solo si cumple su criterio de salida.
 
 | Fase | Cuándo | Estado | Criterio de salida |
 | --- | --- | --- | --- |
-| 0 · Preparación | Semana 1 | Falta escribir los criterios de éxito | Llaves funcionando y criterios de éxito escritos |
+| 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | En curso: costos medidos y variables listas | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | En curso: costos medidos, variables y referencia listas | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -73,7 +73,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 - [x] 0.1 Cuenta de papel en Alpaca (100.000 dólares ficticios).
 - [x] 0.2 Llaves de API guardadas en `.env`, que no se sube a GitHub.
 - [x] 0.3 Entorno de Python (`.venv`) con las dependencias de `requirements.txt`.
-- [ ] 0.4 Escribir los criterios de éxito con números, antes de mirar resultados. Depende del paso 2.1.
+- [x] 0.4 Criterios de éxito escritos con números, antes de mirar resultados del modelo. Están en la sección 5.
 
 ### Fase 1 · Datos
 
@@ -97,7 +97,7 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [x] 2.2 **Variables por acción:** `variables.py` arma una fila por acción cada 15 minutos en horario normal: 3,6 millones de filas y 41 columnas en `datos/variables` (retornos pasados, volatilidad, posición en el rango del día, volumen relativo, beta, retornos sin la parte del mercado, conteo de noticias, sector y los retornos futuros a 15, 30 y 60 minutos). Se comprobó con 1.800 pruebas que ninguna variable usa información posterior al momento de decisión.
 - [ ] 2.3 **Segmentar las acciones:** PCA sobre los retornos, clustering jerárquico sobre la distancia de correlación, y K-means o mezclas gaussianas sobre las variables.
 - [ ] 2.4 **Segmentar el tiempo en regímenes:** calma, pánico, tendencia, lateralidad. Modelo oculto de Markov o mezcla gaussiana sobre la volatilidad.
-- [ ] 2.5 **Programar la referencia (competidor A):** los cuatro efectos documentados.
+- [x] 2.5 **Programar la referencia (competidor A):** `referencia.py` aplica los cuatro efectos documentados con reglas fijas; el detalle está en `resultados/referencia.md`. Ver el resumen abajo.
 - [ ] 2.6 **Entrenar los modelos de velas (competidor B):** XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
 - [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
@@ -123,6 +123,22 @@ Acierto mínimo: el porcentaje de veces que hay que acertar la dirección para n
 - **Tamaño de muestra de la Fase 3:** con un acierto real de 57% hacen falta entre 2.000 y 4.600 operaciones según el horizonte; con 55%, entre 7.000 y 53.000. Con 53% no alcanza.
 
 Límites de la medición: no incluye comisiones ni el efecto del tamaño de la orden; supone que se gana y se pierde lo mismo en promedio; y un modelo que solo opera cuando está seguro puede necesitar menos acierto que el promedio.
+
+#### Resultado del paso 2.5
+
+Ganancia por operación de la referencia en 2016–2024 (sin la muestra final), con un spread completo de costo.
+
+| Horizonte | Operaciones | Acierto | Ganancia bruta | Costo | Ganancia neta |
+| --- | --- | --- | --- | --- | --- |
+| 30 min (26 símbolos) | 362.846 | 50,0% | 0,12 bps | 1,93 bps | −1,81 bps |
+| 60 min (39 símbolos) | 330.750 | 49,8% | 0,03 bps | 2,40 bps | −2,37 bps |
+
+- **Ninguno de los cuatro efectos gana después de costos** en estas acciones: antes de costos quedan en cero y el costo se lleva el resto. Pasa en los dos horizontes y en casi todos los años.
+- **El piso real es no operar** (ganancia cero). El modelo de velas tiene que dar ganancia neta positiva, no solo perder menos que la referencia.
+- **Deriva tras resultados** tiene pocas operaciones (888 a 30 minutos) y su resultado cambia de signo de un año a otro: no se distingue de cero.
+- Las reglas son las versiones más simples de cada efecto, fijadas de antemano. No se afinaron para que ganen, porque eso sería ajustar la referencia a los datos.
+
+Límites: el costo usa el spread de los últimos 60 días para toda la historia, y la deriva es una versión dentro del día de un efecto que se documentó a varios días.
 
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
@@ -217,6 +233,40 @@ Las métricas y el umbral de éxito se fijan por escrito antes de ver resultados
 - **Tamaño de muestra:** según el paso 2.1, entre 2.000 y 4.600 operaciones si el acierto real es de 57%, y muchas más si es menor. Se fija al elegir el horizonte.
 - **Muestra efectiva:** los datos de minutos están autocorrelacionados, y varias acciones reaccionan a la misma noticia; millones de filas no equivalen a millones de observaciones independientes.
 
+### Criterios de éxito (paso 0.4)
+
+**Confirmados el 15 de noviembre de 2026.** Se escribieron antes de correr la referencia y se confirmaron antes de entrenar el modelo de velas. Cualquier cambio se anota en el historial con su razón.
+
+**Reglas comunes**
+
+- **Muestra final:** del 1 de enero de 2025 en adelante. No se mira hasta el cierre de la Fase 2, y se usa una sola vez. Todo el desarrollo se hace con 2016–2024, con validación hacia adelante.
+- **Costo:** un spread completo por operación, con el spread de cada acción medido en el paso 2.1. Todo resultado se repite con el costo doble.
+- **Prueba:** sobre la ganancia neta de cada día, no de cada operación, porque las operaciones de un mismo día no son independientes. Una cola, 5% de significancia.
+- **Comparaciones múltiples:** el 5% se corrige por el número de variantes que llegaron a probarse (SPA de Hansen o Bonferroni). Se lleva la cuenta de todas, también de las descartadas.
+
+**Fase 2: el modelo de velas (B) pasa si, en la muestra final, cumple todo esto**
+
+1. Ganancia neta por operación de al menos 1 bps.
+2. Ganancia neta diaria mayor que la de la referencia (A), con significancia.
+3. Ganancia neta por operación que no es negativa con el costo doble.
+4. Al menos 2.000 operaciones.
+5. Ganancia neta positiva en al menos la mitad de los trimestres de la muestra final.
+
+Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
+
+**Fase 3: H0 se rechaza si, en vivo, IA + velas (D) cumple todo esto**
+
+1. Ganancia neta diaria mayor que la del modelo de velas (B), con significancia, sobre los mismos días.
+2. Ganancia neta por operación positiva.
+3. Al menos 2.000 operaciones de D. Si a los 8 meses no se llega, se cierra y H0 no se rechaza.
+
+La prueba de tendencia por tamaño de LLM es secundaria: se reporta, pero no decide.
+
+**Fase 4: además, para pasar a dinero real**
+
+- La ganancia neta de D no es negativa con el costo doble.
+- La caída máxima en la cuenta de papel no supera el límite que se fije con el capital de riesgo (decisión abierta).
+
 ## 6. Riesgo, tamaño de posición y ejecución
 
 Una capa común decide cuánto apostar, igual para todos los competidores; así se compara solo la calidad de la predicción.
@@ -242,6 +292,7 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `muestrear_spread.py` | Mide el costo de operar cada acción con cotizaciones reales de compra y venta |
 | `barrera_costos.py` | Compara el movimiento del precio con el costo y calcula el acierto mínimo; escribe `resultados/barrera_costos.md` |
 | `variables.py` | Arma la tabla de variables y retornos futuros para los modelos, sin usar información del futuro |
+| `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
 
 ### Habilidades instaladas en `.claude/skills/`
@@ -340,6 +391,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [x] Horizonte: 30 y 60 minutos en horario normal; 15 minutos como comparación.
 - [x] Lo que sale fuera del horario normal no se opera en el momento; es señal para la apertura siguiente.
 - [x] Se opera solo en las acciones baratas de operar (acierto mínimo de 55% o menos según el paso 2.1).
+- [x] Criterios de éxito y muestra final (de 2025 en adelante), en la sección 5.
 - [x] El portátil entrena y el PC viejo opera.
 - [x] El PC viejo y los modelos de IA se configuran al final.
 

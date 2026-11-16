@@ -342,7 +342,7 @@ Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no 
   - **Sin encimar:** cada acción tiene como máximo una posición al día, la del primer momento en que la predicción pasa el costo; sale a las 15:55.
   - **Modelo:** LightGBM v2 (las mismas variables y la búsqueda de hiperparámetros) con la calibración del paso 2.6.c. Validación hacia adelante de 2019 a 2024; la comparación va de 2020 a 2024.
   - **Costo:** el de cada época (sección 5). Decide con el spread del trimestre anterior y la volatilidad del día anterior; paga el del trimestre en curso con la volatilidad de su día.
-  - **Acciones:** las 39 operables a 60 minutos. Un horizonte más largo permitiría más, pero se fija la lista de antemano para no volver a medirla.
+  - **Acciones:** las operables a 60 minutos: 36 acciones (las 39 de esa lista menos SPY, QQQ e IWM, que el modelo de velas no opera). Un horizonte más largo permitiría más, pero se fija la lista de antemano para no volver a medirla.
   - **Ganancia:** sin cobertura, como dicen los criterios. Se informan también la parte de selección y la de mercado.
   - **Se reporta:** ganancia neta, costo doble, por año, sin 2020, trimestres positivos y el t por bloques. Suma 1 variante: con ella van 11 (t exigido con Bonferroni 2,61). Se agrega a `comparaciones.py` aunque se descarte.
   - **Base de comparación:** la calibrada a 60 minutos con el costo de la época, volviendo a decidir (1,00 bps, t 1,40).
@@ -353,6 +353,47 @@ Con la idea 1 ya van 10 variantes. Con las ideas 2 y 3 el total llegaría a 12, 
 Hipótesis de trabajo: modelar por grupo predice mejor que un modelo único para todas las acciones. Se prueba, no se asume.
 
 Regla anti-anticipación: los grupos y regímenes se recalculan en cada ventana de la validación hacia adelante, solo con datos del pasado.
+
+#### Instrucciones para que la IA lea noticias (paso 2.9), versión 1
+
+Diseño del 16 de noviembre de 2026. Las instrucciones y el formato se fijan antes de la Fase 3 y no cambian durante el experimento; si cambian, la versión nueva empieza su propia cuenta.
+
+**Qué recibe la IA:** una noticia por llamada, con titular, resumen, los primeros 2.000 caracteres del texto, fuente, hora de publicación (Nueva York) y, por cada símbolo del universo que menciona (máximo 3, como en `variables.py`), el nombre de la empresa y su sector. No recibe precios: la reacción del precio la calcula el sistema aparte. Las instrucciones van en inglés, porque las noticias están en inglés y los modelos pequeños responden mejor así; las claves del JSON van en español.
+
+**Qué responde,** en JSON, una evaluación por símbolo:
+
+| Campo | Valores | Para qué |
+| --- | --- | --- |
+| `simbolo` | El símbolo | — |
+| `relevancia` | 0 = solo se menciona; 1 = trata de la empresa, pero es menor; 2 = trata directamente de algo importante para la empresa | D |
+| `tono` | −2 a 2, para el precio de esa acción | D |
+| `tipo_evento` | resultados, guia, analista, fusion_adquisicion, legal_regulatorio, producto_negocio, directivos, capital, macro_sector, movimiento_precio, otro | D y revisión |
+| `novedad` | 0 = repite algo ya conocido o comenta un movimiento de precio; 1 = información nueva | D |
+| `sorpresa` | 0 = esperado o rutinario; 1 = algo inesperado; 2 = muy inesperado | D |
+| `decision` | comprar, vender, nada | C |
+| `retorno_esperado_bps` | Entero: retorno de la acción frente al mercado hasta el horizonte | C |
+| `confianza` | 0 a 1 | C y tamaño de posición |
+| `razon` | Una frase de hasta 20 palabras | Revisión (paso 3.5) |
+
+- **Por qué estas escalas:** valores pocos y enteros, para que un modelo de 1–3B los pueda dar de forma estable; los mismos para todos los tamaños, para que la comparación por escala sea justa.
+- **`novedad` es nueva frente al plan:** buena parte de las notas de Benzinga son resúmenes de "acciones que se mueven hoy". Sin ese campo, la IA le daría tono a un movimiento que ya ocurrió.
+- **Parámetros fijos:** temperatura 0, el mismo texto de instrucciones para todos los modelos, y el horizonte como dato de las instrucciones (queda el que salga de la decisión abierta).
+
+**Cuándo cuenta una respuesta:** desde la hora en que llegó la respuesta, no desde la hora de la noticia. Si llega después del momento de decisión, se usa en el siguiente. Así la latencia de cada modelo entra sola en su resultado.
+
+**Qué se registra en SQLite (paso 3.3):** la noticia y su versión (si se corrige, la corrección es una noticia nueva), el modelo y su identificador exacto, la versión de las instrucciones, la hora de envío y de llegada, los tokens, el JSON tal como llegó, si fue válido y los campos ya leídos. Una respuesta inválida se reintenta una vez; si vuelve a fallar, cuenta como "sin respuesta", no se descarta en silencio.
+
+**Variables para D,** calculadas en cada momento de decisión con las respuestas ya llegadas, por acción:
+- `ia_tono_60m`: suma de tono × relevancia / 2 de las noticias nuevas (`novedad` = 1) de la última hora.
+- `ia_sorpresa_60m`: la mayor sorpresa de la última hora entre las noticias con relevancia 2.
+- `ia_relevantes_60m`: cuántas noticias con relevancia 2 hubo en la última hora.
+- `ia_tono_noche`: lo mismo que `ia_tono_60m`, con las noticias desde el cierre anterior (lo que sale fuera de sesión es señal para la apertura).
+- `ia_reaccion`: el signo del tono por el retorno relativo de la acción desde la noticia. Negativo es "noticia buena y el precio no subió" (sección 7).
+- `ia_min_desde_relevante`: minutos desde la última noticia con relevancia 2.
+
+**Qué se puede hacer con el histórico de noticias:** comprobar que las respuestas son JSON válido, que se repiten igual con la misma noticia, cuánto tardan y cuánto cuestan. Nunca medir si aciertan (sección 2, "Regla sobre la IA y el pasado").
+
+**Problema abierto: cómo se entrena D.** D necesita aprender cuánto pesan las variables de la IA, pero no hay historia limpia de esas variables: con noticias viejas el LLM ya sabe qué pasó. Ver "Decisiones abiertas".
 
 ### Fase 3 · Experimento en vivo (cuenta de papel)
 
@@ -601,6 +642,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
 - [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos para probar uno hasta las 15:55 (idea 5, diseño fijado el 16 de noviembre de 2026). Se decide con su resultado.
+- [ ] Cómo se entrena D sin historia limpia de las variables de la IA. Opciones: (a) una regla fija escrita antes de empezar, sin entrenar; (b) los primeros meses en vivo sirven para ajustar una capa pequeña, que combina la predicción de B con las seis variables de la IA y tiene pocos coeficientes; la comparación D contra B se hace en los meses siguientes, reajustando cada mes con lo anterior; (c) entrenar con noticias históricas, lo que está contaminado y se descarta. Propuesta: (b).
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 

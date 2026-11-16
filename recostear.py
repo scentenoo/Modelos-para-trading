@@ -96,6 +96,8 @@ def costo_de(o: pd.DataFrame, tabla: pd.DataFrame, rv: pd.DataFrame, beta: float
     base, ref = tabla["spread"].reindex(llave).to_numpy(dtype="float64"), tabla["ref"].reindex(llave).to_numpy(dtype="float64")
     v = rv.shift(atras)
     fila, columna = v.index.get_indexer(o["dia"]), v.columns.get_indexer(o["symbol"])
+    if (fila < 0).any() or (columna < 0).any():      # get_indexer da -1 y numpy tomaría la última fila sin avisar
+        raise ValueError(f"costo_de: {(fila < 0).sum()} días y {(columna < 0).sum()} símbolos no están en la tabla de volatilidad")
     del_dia = np.log(v.to_numpy()[fila, columna])
     ajuste = np.exp(np.clip(beta * (del_dia - ref), np.log(0.25), np.log(8.0)))
     return base * np.where(np.isfinite(ajuste), ajuste, 1.0)

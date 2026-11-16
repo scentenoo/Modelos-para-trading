@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). La pista más prometedora sigue siendo el horizonte: la señal crece si la operación se mantiene dos o tres horas, con el mismo costo. Desde el 16 de noviembre de 2026 el costo oficial es el spread de cada época. Falta decidir si se prueba un horizonte más largo. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). Desde el 16 de noviembre de 2026 el costo oficial es el spread de cada época y la prueba oficial usa remuestreo por bloques. Con esas reglas se probó un horizonte hasta las 15:55 (idea 5): da 2,87 bps netos por operación (t 2,30) y no pierde con el costo doble, el mejor resultado hasta ahora, pero no llega al t de 2,61 que exigen las 11 variantes probadas (SPA de Hansen, p = 0,083) y sin 2020 baja a 1,24 bps. Las instrucciones para que la IA lea noticias están diseñadas y programadas con un modelo simulado (paso 2.9). Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -297,6 +297,23 @@ Cada operación se cobra con el spread mediano de su símbolo en ese trimestre, 
 - **2020 sigue sosteniendo el resultado a 60 minutos.** Con el costo de la época ese año da 6,99 bps por operación (marzo de 2020 suma 22.171 bps, contra 25.532 con el costo de hoy). De 2021 a 2023 queda negativa y 2024 da 0,87.
 - **Consecuencia:** el costo de hoy subestima lo que pagan las operaciones del modelo, y la ventaja medida hasta ahora dependía de eso. Cualquier versión nueva, incluido un horizonte más largo, tendría que pagar el costo de la época.
 
+#### Resultado de la idea 5: horizonte hasta el cierre
+
+Hecho con `horizonte_largo.py` el 16 de noviembre de 2026, con el diseño fijado antes de programarlo (ver "Notas de las otras ideas"). Validación hacia adelante de 2019 a 2024, comparación de 2020 a 2024, costo de la época, 36 acciones, sin cobertura. El detalle está en `resultados/horizonte_largo.md`.
+
+| Versión | Operaciones | Costo | Ganancia neta | t por bloques | Neta con costo doble | t por bloques (doble) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Calibrada a 60 min, volviendo a decidir (base) | 25.344 | 1,84 bps | 1,00 bps | — (1,40 por días) | −0,85 bps | — |
+| Calibrada hasta el cierre | 33.692 | 2,29 bps | 2,87 bps | 2,30 | 0,57 bps | 0,47 |
+
+- **Es el mejor resultado hasta ahora, y ya con el costo de la época:** casi el triple de la base, y la ganancia no es negativa con el costo doble.
+- **No pasa la corrección por comparaciones múltiples.** Con 11 variantes el t exigido es 2,61 y da 2,30. En `comparaciones.py`: p = 0,011 sin corregir, 0,117 con Bonferroni y 0,083 con el SPA de Hansen. Las otras 10 variantes de esa prueba siguen con el costo de hoy, que las favorece, así que la comparación es conservadora para esta.
+- **La señal es más fuerte que a 30 y 60 minutos.** La correlación de rangos sube a 0,032 (t 6,16) y la selección da 4,00 bps por operación (t 4,73). El mercado aporta 1,16 (t 1,44).
+- **Sigue dependiendo de 2020.** Ese año da 9,03 bps por operación; sin él quedan 1,24 (t por bloques 1,03). 2022 da 4,34, 2021 da 1,46, 2024 da 0,40 y 2023 pierde 1,06. Son 11 de 20 trimestres positivos.
+- **El 70% de las operaciones entra a las 10:00** (3,62 bps netos) y las de 10:30 ganan 5,46; las de 11:00 en adelante pierden. Operar solo a primera hora sería otra variante elegida después de ver este resultado, así que no se adopta sin una prueba nueva.
+- **Lectura:** alargar el horizonte es la dirección correcta: el modelo predice una deriva del día, y a 15:55 la selección pesa más que el costo. Pero la ventaja todavía no se distingue del azar después de corregir por las variantes probadas, y sin 2020 se debilita.
+- Variantes probadas hasta ahora: 11.
+
 #### Resultado de los pasos 2.3 y 2.4
 
 Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
@@ -318,7 +335,7 @@ Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no 
 | 2 · Objetivo sin mercado ni sector | El primero predice el retorno sin la parte de SPY (con la beta de cada acción) y sin la de su sector | El objetivo ya descuenta el promedio de las 50 acciones; `beta_60d` | Una corrida completa (80 minutos) | 2, junto con la idea 3 |
 | 3 · Reacción a la noticia | Variables de cuánto se movió el precio y el volumen desde la última noticia o comunicado 8-K | Conteos de noticias, `volrel_15`, hora exacta de los 8-K | Rehacer `variables.py` y la misma corrida de la idea 2 | — |
 | 4 · Sorpresa contable | Cambio de ingresos y ganancia por acción frente al mismo trimestre del año anterior | Cifras de la SEC | Aplazada: ver abajo | — |
-| 5 · Horizonte largo, **diseño fijado, en programación** | Entrenar y operar con un objetivo hasta las 15:55 y seis decisiones al día | El diagnóstico de duración de la señal | Una corrida completa; reabre la decisión del horizonte | 1 |
+| 5 · Horizonte largo, **probada: la mejor hasta ahora, sin significancia corregida** | Entrenar y operar con un objetivo hasta las 15:55 y seis decisiones al día | El diagnóstico de duración de la señal | Una corrida completa; reabre la decisión del horizonte | 1 |
 
 **Diseño del filtro de operaciones (idea 1)**
 
@@ -552,6 +569,8 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `diagnosticos.py` | Mide si la señal del modelo de velas es mayor después de una noticia y cuánto dura si la operación se mantiene más tiempo; escribe `resultados/diagnosticos.md` |
 | `comparaciones.py` | Corrige por el número de variantes probadas (Bonferroni, Holm y SPA de Hansen con remuestreo por bloques); escribe `resultados/comparaciones.md` |
 | `recostear.py` | Vuelve a costear las operaciones guardadas con el spread del trimestre en que ocurrieron, corregido por la volatilidad del día; escribe `resultados/costo_historico.md` |
+| `horizonte_largo.py` | Idea 5: modelo de velas con salida a las 15:55, seis decisiones al día y costo de la época; escribe `resultados/horizonte_largo.md`. Con `--rapido` prueba solo 2024 |
+| `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Por ahora solo con un modelo simulado |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
@@ -641,7 +660,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
-- [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos para probar uno hasta las 15:55 (idea 5, diseño fijado el 16 de noviembre de 2026). Se decide con su resultado.
+- [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos y se probó uno hasta las 15:55 (idea 5). Es el mejor resultado, pero sin significancia corregida. Falta decidir si pasa a ser el horizonte del modelo de velas.
 - [ ] Cómo se entrena D sin historia limpia de las variables de la IA. Opciones: (a) una regla fija escrita antes de empezar, sin entrenar; (b) los primeros meses en vivo sirven para ajustar una capa pequeña, que combina la predicción de B con las seis variables de la IA y tiene pocos coeficientes; la comparación D contra B se hace en los meses siguientes, reajustando cada mes con lo anterior; (c) entrenar con noticias históricas, lo que está contaminado y se descarta. Propuesta: (b).
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.

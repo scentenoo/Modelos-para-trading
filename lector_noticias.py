@@ -1,7 +1,8 @@
 """
 Base del paso 2.9: arma lo que se le envía a un LLM por cada noticia, valida su
-respuesta JSON y la registra en SQLite. Funciona con un modelo simulado (pruebas)
-y con modelos locales servidos por Ollama; falta Claude por API.
+respuesta JSON y la registra en SQLite. El modelo del experimento es Claude Haiku 5.5
+por API (--claude); también funciona con un modelo simulado (pruebas) y con modelos
+locales servidos por Ollama (se probaron y quedaron fuera del experimento).
 
 Diseño: "Instrucciones para que la IA lea noticias (paso 2.9), versión 1" en el
 documento del proyecto. Las instrucciones van en inglés y no cambian durante el
@@ -28,6 +29,7 @@ Uso:
     python lector_noticias.py --muestra 200 --mes 2025-03
     python lector_noticias.py --ver 62013450                 # instrucciones y entrada exactas de esa noticia
     python lector_noticias.py --probar                       # pruebas de la validación
+    python lector_noticias.py --muestra 30 --claude                                     # Claude Haiku 5.5 por API (ANTHROPIC_API_KEY en .env)
     python lector_noticias.py --muestra 50 --ollama llama3.2:1b                          # Ollama en este equipo
     python lector_noticias.py --muestra 50 --ollama llama3.2:1b --url http://IP:11434   # Ollama en otro equipo
     --horizonte 60   minutos que entran en las instrucciones (por defecto 60)
@@ -280,8 +282,54 @@ class Modelo:
         raise NotImplementedError
 
 
-# Falta ModeloClaude: API de Anthropic (paquete `anthropic`), messages.create con
-# system=instrucciones, temperature=0, y tokens de response.usage.
+MODELO_CLAUDE = "claude-haiku-5-5"
+ESFUERZO_CLAUDE = "low"        # clasificar una noticia no necesita razonamiento largo; menos costo y latencia
+
+
+def esquema_claude(simbolos: list[str]) -> dict:
+    """El mismo esquema, con los rangos como listas de valores (la salida estructurada de la API
+    no admite minimum/maximum ni minItems/maxItems). La validación de siempre revisa el resto."""
+    e = esquema_respuesta(simbolos)
+    obj = e["properties"]["evaluaciones"]["items"]
+    for campo, (a, b) in {"relevancia": (0, 2), "tono": (-2, 2), "novedad": (0, 1), "sorpresa": (0, 2)}.items():
+        obj["properties"][campo] = {"type": "integer", "enum": list(range(a, b + 1))}
+    obj["properties"]["confianza"] = {"type": "number"}
+    e["properties"]["evaluaciones"] = {"type": "array", "items": obj}
+    return e
+
+
+class ModeloClaude(Modelo):
+    """Claude por la API de Anthropic (el modelo del experimento: Claude Haiku 5.5), con salida
+    estructurada (esquema JSON) y esfuerzo bajo. La API ya no acepta temperatura, así que la
+    repetibilidad se mide. Un error de la API, una negativa o una respuesta cortada cuentan como
+    respuesta inválida: se reintenta y, si vuelve a fallar, queda como "sin respuesta"."""
+
+    def __init__(self, modelo: str = MODELO_CLAUDE, esfuerzo: str = ESFUERZO_CLAUDE):
+        import anthropic                       # solo hace falta si se usa Claude
+        from descargar_datos import cargar_env
+        cargar_env()                           # ANTHROPIC_API_KEY desde .env
+        self._anthropic = anthropic
+        self.cliente = anthropic.Anthropic(max_retries=2)
+        self.nombre, self.esfuerzo = modelo, esfuerzo
+        self.identificador = f"{modelo}@{esfuerzo}"
+
+    def responder(self, instrucciones: str, entrada: str) -> tuple[str, int, int]:
+        try:
+            r = self.cliente.messages.create(
+                model=self.nombre, max_tokens=2048, system=instrucciones,
+                messages=[{"role": "user", "content": entrada}],
+                output_config={"effort": self.esfuerzo,
+                               "format": {"type": "json_schema", "schema": esquema_claude(simbolos_de_entrada(entrada))}})
+        except self._anthropic.APIStatusError as e:
+            return f"ERROR de la API de Claude ({e.status_code}): {e.message}", 0, 0
+        except self._anthropic.APIConnectionError as e:
+            return f"ERROR de conexión con Claude: {e}", 0, 0
+        if r.model and r.model != self.nombre:
+            self.identificador = f"{r.model}@{self.esfuerzo}"
+        texto = next((b.text for b in r.content if b.type == "text"), "")
+        if r.stop_reason in ("refusal", "max_tokens"):
+            texto = f"ERROR: la respuesta terminó por {r.stop_reason}. {texto}"
+        return texto, r.usage.input_tokens, r.usage.output_tokens
 
 def simbolos_de_entrada(entrada: str) -> list[str]:
     """Los símbolos que armar_entrada puso después de 'Companies:'."""
@@ -457,7 +505,30 @@ def cargar_mes(mes: str | None) -> pd.DataFrame:
     return pd.read_parquet(a).drop_duplicates("id")
 
 
-def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float, modelo: Modelo | None = None) -> None:
+def repetibilidad(filas: pd.DataFrame, modelo: Modelo, horizonte: int) -> None:
+    """Procesa cada noticia dos veces (en bases distintas) y cuenta cuántas evaluaciones coinciden, campo por campo."""
+    campos = ["relevancia", "tono", "tipo_evento", "novedad", "sorpresa", "decision", "retorno_esperado_bps"]
+    vueltas = []
+    with tempfile.TemporaryDirectory() as carpeta:
+        for i in (1, 2):
+            con = abrir_base(Path(carpeta) / f"vuelta{i}.sqlite")
+            for _, f in filas.iterrows():
+                procesar_noticia(con, modelo, f, horizonte)
+            vueltas.append(pd.read_sql(f"SELECT noticia, simbolo, {', '.join(campos)}, confianza FROM evaluaciones_ia", con))
+            con.close()
+    x = vueltas[0].merge(vueltas[1], on=["noticia", "simbolo"], suffixes=("_1", "_2"))
+    if x.empty:
+        print("Repetibilidad: sin evaluaciones válidas en las dos vueltas.")
+        return
+    iguales = {c: (x[f"{c}_1"] == x[f"{c}_2"]).mean() for c in campos}
+    todo = (x[[f"{c}_1" for c in campos]].values == x[[f"{c}_2" for c in campos]].values).all(axis=1).mean()
+    print(f"Repetibilidad ({len(x)} evaluaciones procesadas dos veces): todos los campos iguales en {100 * todo:.0f}%")
+    print("  " + ", ".join(f"{c} {100 * v:.0f}%" for c, v in iguales.items())
+          + f"; confianza: diferencia media {(x['confianza_1'] - x['confianza_2']).abs().mean():.2f}")
+
+
+def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float, modelo: Modelo | None = None,
+            repetir: bool = False) -> None:
     noticias = cargar_mes(mes)
     idx = random.Random(42).sample(range(len(noticias)), min(n, len(noticias)))
     filas = noticias.iloc[idx]
@@ -490,13 +561,15 @@ def muestra(n: int, mes: str | None, horizonte: int, prob_invalida: float, model
         print(f"Latencia por intento: mediana {q[0]:.1f} s, 90% {q[1]:.1f} s, máxima {lat['latencia_ms'].max() / 1000:.1f} s; "
               f"tokens medios: entrada {lat['tokens_entrada'].mean():.0f}, salida {lat['tokens_salida'].mean():.0f}")
         malas = lat[lat["valido"] == 0]
-        conexion = malas["texto_crudo"].str.startswith("ERROR de conexión")
+        conexion = malas["texto_crudo"].str.startswith("ERROR")
         if conexion.any():
-            print(f"  ¡{conexion.sum()} intentos sin conexión con el modelo! Ejemplo: {malas.loc[conexion, 'texto_crudo'].iloc[0][:200]}")
+            print(f"  ¡{conexion.sum()} intentos con error del modelo o de conexión! Ejemplo: {malas.loc[conexion, 'texto_crudo'].iloc[0][:200]}")
         for motivo, c in malas.loc[~conexion, "motivo_error"].value_counts().head(5).items():
             print(f"  error: {motivo} ({c})")
         if (~conexion).any():
             print(f"  Ejemplo de respuesta inválida: {malas.loc[~conexion, 'texto_crudo'].iloc[0][:300]!r}")
+    if repetir:
+        repetibilidad(filas, modelo, horizonte)
 
 
 def ver(id_noticia: int, horizonte: int) -> None:
@@ -560,13 +633,16 @@ def main():
     ap.add_argument("--probar", action="store_true", help="ejecuta las pruebas de la validación")
     ap.add_argument("--ollama", help="modelo de Ollama para --muestra en vez del simulado, por ejemplo llama3.2:1b")
     ap.add_argument("--url", default="http://localhost:11434", help="dirección del servidor de Ollama")
+    ap.add_argument("--claude", action="store_true", help=f"usa Claude por API ({MODELO_CLAUDE}) en --muestra")
+    ap.add_argument("--repetir", action="store_true", help="en --muestra, procesa cada noticia dos veces más y mide si coinciden")
     a = ap.parse_args()
     if a.probar:
         probar()
     elif a.ver is not None:
         ver(a.ver, a.horizonte)
     elif a.muestra:
-        muestra(a.muestra, a.mes, a.horizonte, a.invalidas, ModeloOllama(a.ollama, a.url) if a.ollama else None)
+        modelo = ModeloClaude() if a.claude else ModeloOllama(a.ollama, a.url) if a.ollama else None
+        muestra(a.muestra, a.mes, a.horizonte, a.invalidas, modelo, a.repetir)
     else:
         ap.print_help()
 

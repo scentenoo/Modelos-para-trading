@@ -6,3 +6,4 @@ numpy
 requests
 lightgbm
 scikit-learn
+anthropic

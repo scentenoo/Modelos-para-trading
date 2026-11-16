@@ -761,7 +761,11 @@ El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo
 - **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
 - **Modelo de IA:** Claude Haiku 5.5 por API; el PC viejo solo envía las noticias y guarda las respuestas. Se probó un modelo local (`llama3.2:1b` con Ollama en el PC viejo): con esquema JSON responde bien, pero a ~100 s por noticia, y un modelo mediano (7–8B) no cabe en sus 4 GB. Por costo, velocidad y mantenimiento se eligió Haiku (16 de noviembre de 2026).
 
-El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Lo siguiente es configurar SSH con llaves e IP fija.
+El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Se administra desde el portátil por SSH (Tailscale). Tiene el proyecto en `/home/samir/Modelos-para-trading` con su `.venv` y su `.env`, y dos servicios de systemd:
+- `noticias-vivo`: lee noticias en vivo con Claude Haiku 5.5, siempre encendido.
+- `actualizar-datos` (temporizador, 9:00 p. m. de Bogotá): baja las velas de 2025 en adelante, los ajustes y las noticias recientes.
+
+Falta: que actualice el código desde GitHub con una clave de despliegue de solo lectura (creada; falta agregarla en GitHub), IP fija y cambiar la contraseña del usuario.
 
 ## 9. Reglas y decisiones
 

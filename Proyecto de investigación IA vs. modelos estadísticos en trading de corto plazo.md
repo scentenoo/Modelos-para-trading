@@ -318,7 +318,7 @@ Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no 
 | 2 · Objetivo sin mercado ni sector | El primero predice el retorno sin la parte de SPY (con la beta de cada acción) y sin la de su sector | El objetivo ya descuenta el promedio de las 50 acciones; `beta_60d` | Una corrida completa (80 minutos) | 2, junto con la idea 3 |
 | 3 · Reacción a la noticia | Variables de cuánto se movió el precio y el volumen desde la última noticia o comunicado 8-K | Conteos de noticias, `volrel_15`, hora exacta de los 8-K | Rehacer `variables.py` y la misma corrida de la idea 2 | — |
 | 4 · Sorpresa contable | Cambio de ingresos y ganancia por acción frente al mismo trimestre del año anterior | Cifras de la SEC | Aplazada: ver abajo | — |
-| 5 · Horizonte largo | Entrenar y operar con un objetivo más largo (hasta el cierre o varias horas) y pocas decisiones al día | El diagnóstico de duración de la señal | Una corrida completa; reabre la decisión del horizonte | 1 o 2, según cuántos horizontes se prueben |
+| 5 · Horizonte largo, **diseño fijado, en programación** | Entrenar y operar con un objetivo hasta las 15:55 y seis decisiones al día | El diagnóstico de duración de la señal | Una corrida completa; reabre la decisión del horizonte | 1 |
 
 **Diseño del filtro de operaciones (idea 1)**
 
@@ -336,6 +336,16 @@ Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no 
 - **Idea 2, con menos prioridad:** la revisión de la ganancia mostró que la parte de mercado está en cómo se mide la ganancia (retorno sin cobertura), no en el objetivo del entrenamiento. Cambiar el objetivo importaría poco; cubrir las operaciones baja la ganancia en vez de subirla. Si se hace, el promedio del sector debe excluir a la propia acción, porque hay sectores de tres acciones y uno de una (LIN). Se espera poca mejora: el promedio de las 50 ya quita casi todo el mercado. La ganancia se sigue midiendo con el retorno sin cobertura, como dicen los criterios.
 - **Idea 3:** variables continuas (retorno desde la noticia frente a la volatilidad esperada, volumen relativo desde la noticia, minutos desde el último 8-K), sin cortes fijos; el árbol los encuentra.
 - **Idea 5, la más prometedora:** el diagnóstico mostró que la selección crece al mantener la operación más tiempo, con el mismo costo. Habría que fijar de antemano un solo diseño (objetivo, momentos de decisión y si las posiciones pueden encimarse) y decidir si la ganancia se mide con o sin cobertura. Reabre la decisión cerrada del horizonte de 30 y 60 minutos, que salió de la barrera de costos; esa misma lógica favorece horizontes más largos. Ya está el costo histórico: si se prueba, se mide con el spread de cada época, que es el costo oficial.
+- **Diseño de la idea 5, fijado el 16 de noviembre de 2026 antes de programarla:**
+  - **Objetivo:** el retorno de cada acción desde la entrada hasta las 15:55 (minuto 384, el cierre de la referencia), menos el promedio de las 50 acciones en ese momento.
+  - **Momentos de decisión:** cada 30 minutos de 10:00 a 12:30 (seis al día). El modelo se entrena y predice con esas mismas filas.
+  - **Sin encimar:** cada acción tiene como máximo una posición al día, la del primer momento en que la predicción pasa el costo; sale a las 15:55.
+  - **Modelo:** LightGBM v2 (las mismas variables y la búsqueda de hiperparámetros) con la calibración del paso 2.6.c. Validación hacia adelante de 2019 a 2024; la comparación va de 2020 a 2024.
+  - **Costo:** el de cada época (sección 5). Decide con el spread del trimestre anterior y la volatilidad del día anterior; paga el del trimestre en curso con la volatilidad de su día.
+  - **Acciones:** las 39 operables a 60 minutos. Un horizonte más largo permitiría más, pero se fija la lista de antemano para no volver a medirla.
+  - **Ganancia:** sin cobertura, como dicen los criterios. Se informan también la parte de selección y la de mercado.
+  - **Se reporta:** ganancia neta, costo doble, por año, sin 2020, trimestres positivos y el t por bloques. Suma 1 variante: con ella van 11 (t exigido con Bonferroni 2,61). Se agrega a `comparaciones.py` aunque se descarte.
+  - **Base de comparación:** la calibrada a 60 minutos con el costo de la época, volviendo a decidir (1,00 bps, t 1,40).
 - **Idea 4, aplazada:** las cifras estructuradas llegan tarde (ver "Limitaciones anotadas" en la sección 4). Solo serviría como variable de varios días a partir del informe trimestral, no como señal de minutos.
 
 Con la idea 1 ya van 10 variantes. Con las ideas 2 y 3 el total llegaría a 12, y con Bonferroni el t exigido subiría de 2,58 a 2,64.
@@ -443,7 +453,7 @@ Las métricas y el umbral de éxito se fijan por escrito antes de ver resultados
 
 - **Muestra final:** del 1 de enero de 2025 en adelante. No se mira hasta el cierre de la Fase 2, y se usa una sola vez. Todo el desarrollo se hace con 2016–2024, con validación hacia adelante.
 - **Costo:** un spread completo por operación, con el spread de la época: la mediana del spread de esa acción en el trimestre de la operación, corregida por la volatilidad de su día (como en `recostear.py`). Para decidir si se opera, el modelo usa solo lo que se sabía entonces: el spread del trimestre anterior y la volatilidad del día anterior. Todo resultado se repite con el costo doble. Cambiado el 16 de noviembre de 2026; antes era el spread de los últimos 60 días para toda la historia (ver el historial). La muestra final se costea igual: sus trimestres se muestrean al abrirla, con la misma regla.
-- **Prueba:** sobre la ganancia neta de cada día, no de cada operación, porque las operaciones de un mismo día no son independientes. Una cola, 5% de significancia.
+- **Prueba:** sobre la ganancia neta de cada día, no de cada operación, porque las operaciones de un mismo día no son independientes. Una cola, 5% de significancia. El error se mide con remuestreo por bloques de días seguidos (bootstrap estacionario, bloques de 10 días en promedio, 10.000 remuestreos, como en `comparaciones.py`), porque los días buenos vienen en racha. Cambiado el 16 de noviembre de 2026; antes suponía días independientes.
 - **Comparaciones múltiples:** el 5% se corrige por el número de variantes que llegaron a probarse (SPA de Hansen o Bonferroni). Se lleva la cuenta de todas, también de las descartadas.
 
 **Fase 2: el modelo de velas (B) pasa si, en la muestra final, cumple todo esto**
@@ -590,8 +600,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
-- [ ] Prueba oficial de significancia: la sección 5 dice que se hace sobre la ganancia neta de cada día, y eso supone días independientes. Los días buenos vienen en racha, así que se propone usar remuestreo por bloques, como hace `comparaciones.py`. Cambia un criterio y está por decidir.
-- [ ] Horizonte: si se reabre la decisión de 30 y 60 minutos para probar uno más largo (idea 5 en reserva).
+- [ ] Horizonte: se reabrió la decisión de 30 y 60 minutos para probar uno hasta las 15:55 (idea 5, diseño fijado el 16 de noviembre de 2026). Se decide con su resultado.
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 
@@ -606,6 +615,7 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [x] Se opera solo en las acciones baratas de operar (acierto mínimo de 55% o menos según el paso 2.1).
 - [x] Criterios de éxito y muestra final (de 2025 en adelante), en la sección 5.
 - [x] Costo oficial: el spread de cada época, corregido por la volatilidad del día (16 de noviembre de 2026). El de hoy resultó optimista: el modelo opera en días volátiles, cuando el spread es más del doble (`resultados/costo_historico.md`).
+- [x] Prueba oficial de significancia: remuestreo por bloques de días seguidos (16 de noviembre de 2026), porque los días buenos vienen en racha.
 - [x] El portátil entrena y el PC viejo opera.
 - [x] El PC viejo y los modelos de IA se configuran al final.
 - [x] Regla de "pattern day trader": el [aviso 26-10 de FINRA](https://www.finra.org/rules-guidance/notices/26-10) eliminó el conteo de operaciones y el mínimo de 25.000 dólares desde el 4 de junio de 2026. Los brókers pueden aplicarlo por etapas hasta el 20 de octubre de 2027. Queda el piso general de 2.000 dólares de una cuenta de margen.
@@ -625,3 +635,4 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 | Precios | Ajustados | Sin ajustar, con corrección al leer | Los ajustados cambian con cada split o dividendo nuevo |
 | Fuentes de texto | Ninguna | Noticias de Alpaca y comunicados de la SEC | Es lo que lee la IA |
 | Costo | Spread de los últimos 60 días para toda la historia | Spread del trimestre de cada operación, corregido por la volatilidad del día | El modelo opera en días volátiles; con el spread de hoy sus operaciones costaban menos de la mitad de lo real |
+| Prueba de significancia | t sobre la ganancia diaria, con días independientes | t con remuestreo por bloques de días | Los días buenos vienen en racha; con bloques el t de la calibrada a 60 minutos bajó de 2,29 a 1,65 |

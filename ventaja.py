@@ -10,6 +10,11 @@ Dos preguntas sobre un archivo de operaciones ya guardado:
        - alterna 2: SPY más la referencia (competidor A), neta de costos.
   2. ¿Está concentrada? Cuánto aportan los mejores días, el mejor año, las
      compras frente a las ventas y cada acción.
+  3. ¿Cuánto viene de elegir bien la acción y cuánto del mercado? El modelo
+     predice el retorno de cada acción frente a las demás, pero la ganancia se
+     mide con el retorno crudo. Cada operación se parte en dos: lo que la acción
+     hizo frente al promedio de las 50 (selección) y lo que hizo ese promedio
+     en el mismo intervalo, en la dirección operada (mercado).
 
 Es descriptivo: no entrena nada y no cuenta como variante.
 
@@ -94,6 +99,32 @@ def _linea(nombre: str, o: pd.DataFrame) -> str:
     return f"| {nombre} | {num(len(o), 0)} | {num(o['neto_bps'].mean(), 2)} | {num(t, 2)} | {num((o['bruto_bps'] - 2 * o['costo_bps']).mean(), 2)} |"
 
 
+def _media_t(x: pd.Series, dia: pd.Series) -> str:
+    """Media por operación y t agrupando por día."""
+    d = x.groupby(dia).sum()
+    return f"{num(x.mean(), 2)} ({num(d.mean() / (d.std(ddof=1) / np.sqrt(len(d))), 2)})"
+
+
+def seleccion_y_mercado(o: pd.DataFrame, h: int) -> list[str]:
+    """Parte la ganancia bruta de cada operación en selección (frente al promedio de las 50) y mercado."""
+    pred = pd.read_parquet(RAIZ / "modelos" / f"predicciones_{h}.parquet", columns=["symbol", "dia", "minuto", "obj_bps", "rel_bps"])
+    x = o.merge(pred.rename(columns={"minuto": "entrada"}), on=["symbol", "dia", "entrada"], how="left")
+    x["seleccion"] = x["direccion"] * x["rel_bps"]
+    x["mercado"] = x["direccion"] * (x["obj_bps"] - x["rel_bps"])
+    x["cubierta"] = x["seleccion"] - x["costo_bps"]
+    L = ["### ¿Selección o mercado?", "",
+         "Cada celda: media por operación en bps y, entre paréntesis, su t. La ganancia bruta es la suma de selección y mercado. "
+         "La última columna es la ganancia neta si cada operación se cubriera con el promedio de las 50 acciones, sin contar el costo de esa cobertura.", "",
+         "| Operaciones | Cantidad | Ganancia bruta | Selección | Mercado | Neta | Neta con cobertura |", "| --- | --- | --- | --- | --- | --- | --- |"]
+    grupos = [("Todas", x), ("Compras", x[x["direccion"] > 0]), ("Ventas", x[x["direccion"] < 0])]
+    grupos += [(f"Compras, {a}", g) for a, g in x[x["direccion"] > 0].groupby(x["dia"].dt.year)]
+    grupos += [(f"Ventas, {a}", g) for a, g in x[x["direccion"] < 0].groupby(x["dia"].dt.year)]
+    for nombre, g in grupos:
+        L.append(f"| {nombre} | {num(len(g), 0)} | {_media_t(g['bruto_bps'], g['dia'])} | {_media_t(g['seleccion'], g['dia'])} | {_media_t(g['mercado'], g['dia'])} | "
+                 f"{_media_t(g['neto_bps'], g['dia'])} | {_media_t(g['cubierta'], g['dia'])} |")
+    return L + [""]
+
+
 def seccion(h: int, o: pd.DataFrame, t: pd.DataFrame, j: dict) -> list[str]:
     L = [f"## Horizonte de {h} minutos ({t.index.min():%Y-%m-%d} a {t.index.max():%Y-%m-%d}, {len(t)} días)", "",
          f"**Veredicto del analizador: {VEREDICTOS[j['verdict']['status']]}.**", "",
@@ -145,7 +176,7 @@ def main() -> None:
     for h in HORIZONTES:
         o = pd.read_parquet(RAIZ / "modelos" / f"{args.operaciones}_{h}.parquet")
         t = serie_diaria(o, h, int(universo[h].sum()))
-        L += seccion(h, o, t, analizar(t, h))
+        L += seccion(h, o, t, analizar(t, h)) + seleccion_y_mercado(o, h)
     texto = "\n".join(L)
     nombre = "ventaja.md" if args.operaciones == "operaciones_calibradas" else f"ventaja_{args.operaciones}.md"
     (RESULTADOS / nombre).write_text(texto, encoding="utf-8")

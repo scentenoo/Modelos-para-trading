@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero todavía no alcanza la significancia que exigen las variantes probadas (van 10), y esa ganancia depende de marzo de 2020. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Lo siguiente es volver a costear las operaciones con el spread de cada época, que se está midiendo. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. La pista más prometedora es el horizonte: la señal sigue creciendo si la operación se mantiene dos o tres horas, con el mismo costo. Lo siguiente es volver a costear las operaciones con el spread de cada época, que se está midiendo, y con eso decidir si se prueba un horizonte más largo. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -228,9 +228,54 @@ Adelanto del paso 2.8, hecho el 16 de noviembre de 2026 con `ventaja.py`, que us
 - **Sin esos días no queda ventaja medible:** sin los 10 mejores días da 0,48 bps por operación (t 0,65); sin 2020 da 0,38 bps (t 0,43) y −1,33 con el costo doble.
 - **Las compras ganan más que las ventas:** 4,68 bps contra 0,59, y solo el 36% de las operaciones son compras.
 - **Por acción:** 23 de 36 ganan; NVDA aporta el 28% y AAPL el 16%.
+- **Selección y mercado:** al partir la ganancia bruta de cada operación entre lo que la acción hizo frente al promedio de las 50 (selección) y lo que hizo ese promedio (mercado), a 60 minutos salen 2,59 bps de selección (t 4,64) y 1,17 de mercado (t 2,22). El mercado viene casi todo de las compras de 2020 (9,10 bps por operación). Si cada operación se cubriera con el promedio de las 50, la ganancia neta bajaría de 2,07 a 0,90 bps (t 1,61), sin contar el costo de la cobertura. A 30 minutos el mercado casi no pesa: 2,17 de selección (t 5,31) y 0,22 de mercado.
+- **La selección es real en compras y en ventas,** pero mayor en las compras (3,79 contra 1,91 bps a 60 minutos).
 - **Veredicto de la herramienta:** ventaja frágil, porque la ganancia es positiva en muy pocas de las ventanas de 63 días.
 - **A 30 minutos pasa lo mismo:** los 10 mejores días aportan el 74% de la ganancia, casi todos de 2022, y sin ellos quedan 0,25 bps por operación (t 0,46).
 - **Consecuencia:** la ganancia a 60 minutos descansa en marzo de 2020, que es donde el costo está peor medido (el spread de AAPL ese mes era unas 5 veces el de hoy). Por eso se está midiendo el spread de cada época.
+
+#### Diagnósticos de la señal: noticias y horizonte
+
+Hechos con `diagnosticos.py` el 16 de noviembre de 2026, sobre las predicciones de la segunda versión y las operaciones de la calibrada, 2020–2024. Son descriptivos y no cuentan como variantes. El detalle está en `resultados/diagnosticos.md`. "Selección" es el retorno de la acción frente al promedio de las 50, en la dirección que predijo el modelo, antes de costos.
+
+**¿El modelo elige mejor después de una noticia?** No de forma clara.
+
+| Momentos | Parte de las filas | Selección a 30 min (t) | Selección a 60 min (t) |
+| --- | --- | --- | --- |
+| Sin noticias desde el cierre de ayer | 46% y 54% | 0,24 bps (2,76) | 0,50 bps (3,01) |
+| Con noticias hoy, ninguna en la última hora | 39% y 33% | 0,58 bps (5,63) | 0,92 bps (4,62) |
+| Con noticia en la última hora | 15% y 13% | 0,69 bps (3,40) | 1,20 bps (3,36) |
+| Con 3 o más noticias en la última hora | 1% | 2,75 bps (2,53) | 3,61 bps (1,74) |
+
+- La selección es algo mayor con noticia, pero casi todo es porque esas acciones se mueven más: como porcentaje del movimiento típico, la última hora con noticia no supera a los días con noticias más viejas.
+- Dentro de una misma acción no hay diferencia: la selección es mayor con noticia en 13 de 23 acciones a 30 minutos y en 14 de 34 a 60.
+- Con 3 o más noticias en una hora sí hay más para ganar, pero es el 1% de los momentos y el t ronda 2.
+- Lectura: la señal del modelo de velas no viene de las noticias. Lo que la IA sume en la Fase 3 sería información nueva, no un refuerzo de lo que ya hay.
+
+**¿Cuánto dura la señal?** Sigue creciendo mucho más allá del horizonte para el que se entrenó. Operaciones de la versión calibrada, sobre las mismas entradas (hasta las 12:54, donde caben todas las duraciones):
+
+| Se mantiene | Modelo de 30 min: selección (t) | Menos el costo (t) | Modelo de 60 min: selección (t) | Menos el costo (t) |
+| --- | --- | --- | --- | --- |
+| 30 min | 1,79 bps (3,18) | 0,32 (0,57) | 1,48 bps (2,57) | −0,22 (−0,39) |
+| 60 min | 3,61 bps (4,09) | 2,14 (2,44) | 2,42 bps (3,20) | 0,72 (0,95) |
+| 120 min | 5,07 bps (3,87) | 3,61 (2,76) | 2,62 bps (2,51) | 0,92 (0,88) |
+| 180 min | 6,38 bps (3,97) | 4,92 (3,07) | 3,87 bps (2,98) | 2,17 (1,68) |
+| Hasta el cierre | 6,83 bps (3,24) | 5,37 (2,55) | 4,78 bps (2,80) | 3,08 (1,81) |
+
+- Con el modelo de 30 minutos, mantener 3 horas da 4,92 bps después del costo, contra 0,32 al cerrar a los 30 minutos. El costo es el mismo.
+- Es coherente con lo que el modelo usa: sus variables principales son de escala diaria (sector, retorno de la noche, de ayer, de 20 días). Predice una deriva del día, no un movimiento de media hora.
+- **Todavía no es un resultado.** Es una exploración con 12 miradas (6 duraciones por 2 modelos) sobre el periodo de desarrollo; "menos el costo" usa solo la selección (supone la parte de mercado cubierta y no cuenta ese costo); solo incluye entradas de la mañana; mantener 3 horas entrando cada 30 minutos encima posiciones en la misma acción; y los t suponen días independientes.
+- La prueba honesta es la idea 5 de las ideas en reserva.
+
+#### Comparaciones múltiples
+
+Hecho con `comparaciones.py` el 16 de noviembre de 2026, sobre la ganancia neta diaria de las 10 variantes en 2020–2024. Usa remuestreo por bloques de 10 días en promedio, porque los días cercanos no son independientes. El detalle está en `resultados/comparaciones.md`.
+
+- **Contra no operar, ninguna variante pasa.** SPA de Hansen: p = 0,227. La mejor, la calibrada a 60 minutos, tiene p = 0,050 sin corregir y 0,498 con Bonferroni.
+- **Contra la referencia, todas pasan** (p = 0,000), pero eso solo dice que pierden menos que una regla que pierde siempre.
+- **El t de 2,29 de la calibrada a 60 minutos estaba inflado.** Los días buenos vienen en racha (marzo de 2020). Con el remuestreo por bloques el t baja a 1,65; con Newey-West queda entre 1,6 y 1,9 según los rezagos.
+- Los t de los demás informes agrupan por día pero suponen días independientes; para decidir vale el de este informe.
+- Cada variante nueva que se pruebe se agrega a la lista de `comparaciones.py`, también si se descarta.
 
 #### Resultado de los pasos 2.3 y 2.4
 
@@ -253,6 +298,7 @@ Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no 
 | 2 · Objetivo sin mercado ni sector | El primero predice el retorno sin la parte de SPY (con la beta de cada acción) y sin la de su sector | El objetivo ya descuenta el promedio de las 50 acciones; `beta_60d` | Una corrida completa (80 minutos) | 2, junto con la idea 3 |
 | 3 · Reacción a la noticia | Variables de cuánto se movió el precio y el volumen desde la última noticia o comunicado 8-K | Conteos de noticias, `volrel_15`, hora exacta de los 8-K | Rehacer `variables.py` y la misma corrida de la idea 2 | — |
 | 4 · Sorpresa contable | Cambio de ingresos y ganancia por acción frente al mismo trimestre del año anterior | Cifras de la SEC | Aplazada: ver abajo | — |
+| 5 · Horizonte largo | Entrenar y operar con un objetivo más largo (hasta el cierre o varias horas) y pocas decisiones al día | El diagnóstico de duración de la señal | Una corrida completa; reabre la decisión del horizonte | 1 o 2, según cuántos horizontes se prueben |
 
 **Diseño del filtro de operaciones (idea 1)**
 
@@ -267,8 +313,9 @@ Anotadas el 16 de noviembre de 2026. La idea 1 ya se probó ese mismo día y no 
 
 **Notas de las otras ideas**
 
-- **Idea 2:** el promedio del sector debe excluir a la propia acción, porque hay sectores de tres acciones y uno de una (LIN). Se espera poca mejora: el promedio de las 50 ya quita casi todo el mercado. La ganancia se sigue midiendo con el retorno sin cobertura, como dicen los criterios.
+- **Idea 2, con menos prioridad:** la revisión de la ganancia mostró que la parte de mercado está en cómo se mide la ganancia (retorno sin cobertura), no en el objetivo del entrenamiento. Cambiar el objetivo importaría poco; cubrir las operaciones baja la ganancia en vez de subirla. Si se hace, el promedio del sector debe excluir a la propia acción, porque hay sectores de tres acciones y uno de una (LIN). Se espera poca mejora: el promedio de las 50 ya quita casi todo el mercado. La ganancia se sigue midiendo con el retorno sin cobertura, como dicen los criterios.
 - **Idea 3:** variables continuas (retorno desde la noticia frente a la volatilidad esperada, volumen relativo desde la noticia, minutos desde el último 8-K), sin cortes fijos; el árbol los encuentra.
+- **Idea 5, la más prometedora:** el diagnóstico mostró que la selección crece al mantener la operación más tiempo, con el mismo costo. Habría que fijar de antemano un solo diseño (objetivo, momentos de decisión y si las posiciones pueden encimarse) y decidir si la ganancia se mide con o sin cobertura. Reabre la decisión cerrada del horizonte de 30 y 60 minutos, que salió de la barrera de costos; esa misma lógica favorece horizontes más largos. Se decide al ver el costo histórico.
 - **Idea 4, aplazada:** las cifras estructuradas llegan tarde (ver "Limitaciones anotadas" en la sección 4). Solo serviría como variable de varios días a partir del informe trimestral, no como señal de minutos.
 
 Con la idea 1 ya van 10 variantes. Con las ideas 2 y 3 el total llegaría a 12, y con Bonferroni el t exigido subiría de 2,58 a 2,64.
@@ -347,7 +394,7 @@ Cada comunicado trae la hora exacta en que quedó público (verificada en UTC) y
 - **Sesgo de supervivencia:** el universo son empresas que existen hoy.
 - **LIN** tiene datos solo desde 2018, cuando empezó a cotizar con ese símbolo.
 - **Las cifras de la SEC llegan después del comunicado de resultados.** Vienen del informe trimestral (10-Q o 10-K), no del 8-K. De 1.893 comunicados de resultados de 2016 a 2024, solo en el 20% las cifras estaban disponibles ese mismo día; la mediana es 7 días después. Usarlas el día del comunicado sería usar información del futuro. Visa no reporta ganancia por acción en estos datos.
-- **El costo usa el spread de hoy para toda la historia:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo. Alpaca sí entrega cotizaciones de años anteriores, así que `muestrear_spread.py --historico` está tomando una muestra por trimestre de 2016 a 2024 (en `datos/spread_historico`). Con eso se volverán a costear las operaciones guardadas, como prueba de sensibilidad. Adoptarlo como costo oficial cambiaría una regla de la sección 5 y está por decidir.
+- **El costo usa el spread de hoy para toda la historia:** el spread de cada acción se midió con los últimos 60 días de mercado y es un solo número por símbolo. Alpaca sí entrega cotizaciones de años anteriores, así que `muestrear_spread.py --historico` está tomando una muestra por trimestre de 2016 a 2024 (en `datos/spread_historico`). Con eso se volverán a costear las operaciones guardadas con `recostear.py`, como prueba de sensibilidad. Primer indicio, con 8 de 53 símbolos medidos: GOOGL y AMZN costaban entre 4 y 7 bps de 2016 a 2021, contra 0,7 hoy, porque antes de sus splits de 2022 valían más de mil dólares por acción; el costo de esos años está subestimado en las acciones que hicieron split. Adoptarlo como costo oficial cambiaría una regla de la sección 5 y está por decidir.
 - **Empresas reorganizadas:** Exxon (2026), Disney (2019) y Broadcom (2018) pasaron a una sociedad nueva y la SEC les dio otro número de registro. `descargar_sec.py` tiene una tabla con los registros anteriores; si otra empresa se reorganiza, hay que agregarla ahí.
 
 ### Pagos opcionales
@@ -430,7 +477,10 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `referencia.py` | Aplica los cuatro efectos de la referencia (competidor A) y calcula su ganancia neta; escribe `resultados/referencia.md`. No usa la muestra final salvo con `--muestra-final` |
 | `modelo_velas.py` | Entrena el modelo de velas (competidor B) con validación hacia adelante y lo compara con la referencia; escribe `resultados/modelo_velas.md` |
 | `segmentos.py` | Calcula los grupos de acciones y los regímenes de mercado por ventana de validación, y mide si la señal del modelo de velas cambia según el segmento; escribe `resultados/segmentos.md` |
-| `ventaja.py` | Revisa de dónde sale la ganancia de un archivo de operaciones: si es ventaja propia o exposición al mercado, y cuánto depende de pocos días, de un año o de pocas acciones; escribe `resultados/ventaja.md` |
+| `ventaja.py` | Revisa de dónde sale la ganancia de un archivo de operaciones: si es ventaja propia o exposición al mercado, cuánto depende de pocos días, de un año o de pocas acciones, y cuánto es selección y cuánto mercado; escribe `resultados/ventaja.md` |
+| `diagnosticos.py` | Mide si la señal del modelo de velas es mayor después de una noticia y cuánto dura si la operación se mantiene más tiempo; escribe `resultados/diagnosticos.md` |
+| `comparaciones.py` | Corrige por el número de variantes probadas (Bonferroni, Holm y SPA de Hansen con remuestreo por bloques); escribe `resultados/comparaciones.md` |
+| `recostear.py` | Vuelve a costear las operaciones guardadas con el spread del trimestre en que ocurrieron; escribirá `resultados/costo_historico.md` cuando termine el muestreo |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
@@ -520,6 +570,9 @@ Pendiente: salida del comando de diagnóstico del PC viejo para decidir si se re
 - [ ] Capital máximo de riesgo.
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
+- [ ] Prueba oficial de significancia: la sección 5 dice que se hace sobre la ganancia neta de cada día, y eso supone días independientes. Los días buenos vienen en racha, así que se propone usar remuestreo por bloques, como hace `comparaciones.py`. Cambia un criterio y está por decidir.
+- [ ] Horizonte: si se reabre la decisión de 30 y 60 minutos para probar uno más largo (idea 5 en reserva).
+- [ ] Costo oficial: el spread de hoy para toda la historia (regla actual) o el spread de cada época. Se decide al ver `resultados/costo_historico.md`.
 - [ ] Modelo local a probar en el portátil.
 - [ ] Compra del segundo módulo de RAM.
 

@@ -15,7 +15,7 @@ Proyecto de investigación · @Samir Centeno · versión 3 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. La calibración de la predicción (paso 2.6.c) ya se corrió y su resultado está por revisar. Los criterios de éxito (paso 0.4) están confirmados.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 en curso: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero todavía no alcanza la significancia que exigen 8 variantes probadas. Lo siguiente son las ideas en reserva, empezando por el filtro de operaciones. Los criterios de éxito (paso 0.4) están confirmados.
 
 ## 2. Cómo funciona el sistema
 
@@ -64,7 +64,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | En curso: dos versiones del modelo de velas, que aún no pagan los costos | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | En curso: la segunda versión calibrada gana a 60 minutos, sin significancia suficiente todavía | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -98,10 +98,10 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [x] 2.3 **Segmentar las acciones:** hecho con `segmentos.py`: PCA sobre los retornos y clustering jerárquico sobre la correlación, y K-means sobre las características de cada acción. Ver el resumen abajo.
 - [x] 2.4 **Segmentar el tiempo en regímenes:** hecho con `segmentos.py`: mezcla gaussiana sobre volatilidad, tendencia y dispersión, con rasgos conocidos antes de la apertura. No se usa un modelo oculto de Markov, porque sus estados suavizados miran el futuro. Ver el resumen abajo.
 - [x] 2.5 **Programar la referencia (competidor A):** `referencia.py` aplica los cuatro efectos documentados con reglas fijas; el detalle está en `resultados/referencia.md`. Ver el resumen abajo.
-- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** dos versiones hechas con `modelo_velas.py` (ver los resúmenes abajo); falta una versión que pague los costos. Plan de mejora, en este orden:
+- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** dos versiones hechas con `modelo_velas.py` y una calibración con `calibracion.py` (ver los resúmenes abajo); falta una versión que pague los costos con significancia. Plan de mejora, en este orden:
   - [x] 2.6.a **Variables comparativas:** el puesto de cada acción frente a las demás en ese momento (retornos, volumen, volatilidad) y su retorno frente al promedio de su sector. El modelo predice un orden, y hasta ahora casi todas sus variables eran de la acción sola.
   - [x] 2.6.b **Búsqueda de hiperparámetros dentro de cada entrenamiento:** para cada año de prueba se eligen con el último año anterior, nunca con el año de prueba, así que no suma variantes por combinación. La idea sale del taller de tidymodels de Freddy Hernández, cambiando la validación cruzada al azar por una que respeta el tiempo.
-  - [ ] 2.6.c **Calibrar la predicción:** el modelo exagera (en la décima más fuerte predice cerca del doble de lo que ocurre), así que el filtro de costo deja pasar operaciones que no pagan. Se corrige con años anteriores al de prueba. Reutiliza las predicciones guardadas, sin reentrenar. Estado al 16 de noviembre de 2026: `calibracion.py` está escrito y se corrió antes de tiempo; el resultado está en `resultados/calibracion.md` y falta revisarlo. La regla de calibración se fijó antes de correr. Ya cuenta como una variante por horizonte: con ella van 8 variantes probadas.
+  - [x] 2.6.c **Calibrar la predicción:** el modelo exagera (en la décima más fuerte predice cerca del doble de lo que ocurre), así que el filtro de costo deja pasar operaciones que no pagan. Se corrige con años anteriores al de prueba. Reutiliza las predicciones guardadas, sin reentrenar. Hecho con `calibracion.py` el 16 de noviembre de 2026, con la regla fijada antes de correr (ver el resumen abajo). Cuenta como una variante por horizonte: con ella van 8 variantes probadas.
   - [ ] 2.6.d Grupos y regímenes como variables (pasos 2.3 y 2.4). Baja de prioridad: el diagnóstico mostró que la señal está en los cuatro regímenes.
   - 2.6.a y 2.6.b se probaron juntas como segunda versión, para gastar una sola variante por horizonte; la corrida completa tarda unos 80 minutos en el portátil. XGBoost/LightGBM como modelo principal, por grupo. Regresión logística como base. MLP/LSTM pequeño solo si le gana a XGBoost fuera de muestra. Se predice el retorno de cada acción relativo al de las demás, y se opera solo cuando la ganancia esperada supera el costo.
 - [ ] 2.7 **Controles para comparar:** un modelo global con grupo y régimen como variables, y un modelo multinivel en el que cada grupo tiene sus propios coeficientes pero se acercan a la media general cuando tiene pocos datos.
@@ -179,6 +179,25 @@ Misma validación, con variables comparativas y búsqueda de hiperparámetros (1
 - **La búsqueda casi siempre elige el máximo** (500 árboles): la rejilla se queda corta por arriba.
 - Variantes probadas hasta ahora: 6 (tres modelos por dos horizontes).
 
+#### Resultado del paso 2.6.c, calibración
+
+La predicción de cada año se multiplica por una pendiente calculada con los años de prueba anteriores, y se opera igual que antes. La comparación va de 2020 a 2024, porque 2019 no tiene años anteriores para calibrar; la segunda versión sin calibrar se mide en esos mismos años. El detalle está en `resultados/calibracion.md`.
+
+| Horizonte | Versión | Operaciones | Ganancia neta | t | Neta con costo doble |
+| --- | --- | --- | --- | --- | --- |
+| 30 min | Segunda | 44.494 | 0,42 bps | 0,91 | −1,11 bps |
+| 30 min | Segunda calibrada | 26.661 | 0,94 bps | 1,61 | −0,51 bps |
+| 60 min | Segunda | 48.635 | 1,20 bps | 1,88 | −0,71 bps |
+| 60 min | Segunda calibrada | 25.272 | 2,07 bps | 2,29 | 0,37 bps |
+
+- **Opera cerca de la mitad y gana más por operación.** La pendiente sale entre 0,39 y 0,83: el modelo exageraba entre un 20% y un 60%.
+- **A 60 minutos es el mejor resultado hasta ahora:** por primera vez la ganancia no es negativa con el costo doble y el t pasa de 2.
+- **No alcanza para darlo por bueno.** Con 8 variantes el t exigido es 2,50 y da 2,29; con el costo doble la ganancia no se distingue de cero (t 0,41); y solo 10 de 20 trimestres son positivos.
+- **Sigue dependiendo de 2020:** a 60 minutos ese año da 9,71 bps por operación, 2021 y 2022 quedan cerca de cero y 2023 pierde 1,34.
+- **A 30 minutos** mejora menos y sigue negativa con el costo doble.
+- La calibración queda como parte fija del modelo de velas. Estos números son del periodo de desarrollo; los criterios de la sección 5 se miden en la muestra final.
+- Variantes probadas hasta ahora: 8.
+
 #### Resultado de los pasos 2.3 y 2.4
 
 Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El detalle está en `resultados/segmentos.md`.
@@ -192,7 +211,7 @@ Todo se calcula por ventana, solo con días anteriores a cada año de prueba. El
 
 #### Ideas en reserva para el modelo de velas
 
-Anotadas el 16 de noviembre de 2026. Están diseñadas pero no programadas ni corridas, así que no cuentan como variantes. Se retoman después de revisar la calibración (2.6.c), en este orden.
+Anotadas el 16 de noviembre de 2026. Están diseñadas pero no programadas ni corridas, así que no cuentan como variantes. Son lo siguiente en el paso 2.6, en este orden.
 
 | Idea | Qué es | Qué existe ya | Costo | Variantes que suma |
 | --- | --- | --- | --- | --- |

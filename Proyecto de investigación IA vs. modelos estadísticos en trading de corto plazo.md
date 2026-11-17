@@ -689,6 +689,7 @@ Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
 - **Para qué sirve:** comprobar que el lector de noticias con Haiku, B en modo sombra, el cierre diario y la actualización nocturna funcionan juntos en sesiones reales, y medir latencia, costo de la IA y volumen de noticias.
 - **Lo que no se puede concluir:** una semana son unas 50 operaciones de B; el cálculo de potencia pide meses, y D necesita un mes de ajuste antes de compararse. H0 queda sin probar por falta de datos, no rechazada ni aceptada.
 - **Cómo cierra el proyecto:** con el resultado negativo de la Fase 2 (B no pasó la muestra final) y con el sistema en vivo funcionando como prueba técnica. La pregunta de si la IA mejora a un modelo de velas queda abierta.
+- **Automatizado en el PC viejo:** `prueba_tecnica.py` escribe un informe cada día hábil a las 5:30 p. m. (temporizador `informe-tecnico`), y el lunes 23 de noviembre a las 5:45 p. m. el temporizador `fin-prueba` escribe el resumen de la semana y apaga los servicios (`noticias-vivo`, `b-sombra`, `actualizar-datos` e `informe-tecnico`), para que no siga el gasto en Haiku. Todo queda en `datos/registros/prueba_tecnica.md` del PC viejo; falta copiar el resumen a este documento.
 
 **Fase 3: H0 se rechaza si, en vivo, IA + velas (D) cumple todo esto** (no se llegó a medir: la Fase 3 se redujo a una semana de prueba técnica; ver el resultado de la muestra final)
 
@@ -740,6 +741,15 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `variantes_b.py` | Variantes 13 (B con rasgos de régimen) y 14 (ridge multinivel por grupo), comparadas con B; escribe `resultados/variantes_b.md` |
 | `revision_cierre.py` | Revisión contra el sobreajuste de la idea 5: umbral, hora de salida, costo, mercado y concentración; escribe `resultados/revision_cierre.md` |
 | `lector_noticias.py` | Arma la entrada de cada noticia para la IA, valida su respuesta JSON y la registra en SQLite (paso 2.9). Usa Claude Haiku 5.5 por API (`--claude`), con salida estructurada y esfuerzo bajo; `--repetir` mide si la misma noticia da la misma respuesta. Tiene además un modelo simulado para las pruebas y la conexión a Ollama (`--ollama`), que se usó para probar `llama3.2:1b` |
+| `costo_bordes.py` | Control del costo en la apertura y el cierre: corrige el costo de la idea 5 con la razón entre el spread de esas franjas y el de horario normal; escribe `resultados/costo_bordes*.md` |
+| `modelo_final.py` | Entrena y guarda el modelo final de B (2016–2024, variante 12) con su pendiente fija, en `datos/modelos/final/` |
+| `muestra_final.py` | Evalúa B en la muestra final con el protocolo fijado; solo con `--abrir` (`--ensayo AAAA` prueba el código en un año de desarrollo); escribe `resultados/muestra_final.md` |
+| `calendario.py` | Guarda el calendario de sesiones de Alpaca (2016–2027) y lo compara con los medios días detectados por volumen |
+| `variables_vivo.py` | Calcula en vivo las variables del modelo de velas con las velas hasta cada momento de decisión; coincide con la tabla histórica |
+| `variables_ia.py` | Calcula las seis variables de la IA para D con las respuestas de Haiku ya llegadas en cada momento |
+| `noticias_vivo.py` | Lee noticias en vivo cada minuto, las procesa con Haiku y las registra, con reintento tardío; corre como servicio en el PC viejo |
+| `b_sombra.py` | B en modo sombra: decide y registra lo que haría en cada momento, y completa las operaciones al cierre, sin órdenes; corre como servicio en el PC viejo |
+| `prueba_tecnica.py` | Informe diario y resumen de la semana de prueba técnica (noticias, modo sombra y servicios); escribe `datos/registros/prueba_tecnica.md` en el PC viejo |
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |

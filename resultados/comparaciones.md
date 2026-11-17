@@ -1,6 +1,6 @@
 # Comparaciones múltiples del modelo de velas
 
-Generado el 2026-11-16 con `comparaciones.py`. 12 variantes, 1249 días (2020-01-02 a 2024-12-31), 10.000 remuestreos por bloques de 10 días en promedio. No incluye la muestra final.
+Generado el 2026-11-16 con `comparaciones.py`. 14 variantes, 1249 días (2020-01-02 a 2024-12-31), 10.000 remuestreos por bloques de 10 días en promedio. No incluye la muestra final.
 
 La ganancia diaria está en bps por acción operable, con el costo de la época en todas las variantes. El t se calcula con el remuestreo por bloques, así que puede diferir un poco del de los otros informes. Pruebas de una cola: un valor p menor que 0,05 indica que la ganancia se distingue de la base.
 
@@ -8,12 +8,14 @@ La ganancia diaria está en bps por acción operable, con el costo de la época 
 
 | Variante | Ganancia diaria media | t | p sin corregir | p con Bonferroni | p con Holm |
 | --- | --- | --- | --- | --- | --- |
-| LightGBM v2 calibrado, hasta el cierre | 1,984 | 2,30 | 0,011 | 0,128 | 0,128 |
-| LightGBM v2 calibrado, hasta el cierre, entrada 20 min después | 1,508 | 2,15 | 0,016 | 0,190 | 0,175 |
+| LightGBM v2 calibrado, hasta el cierre | 1,984 | 2,30 | 0,011 | 0,149 | 0,149 |
+| LightGBM v2 calibrado, hasta el cierre, entrada 20 min después | 1,508 | 2,15 | 0,016 | 0,222 | 0,206 |
+| LightGBM v2 con régimen, hasta el cierre, entrada 20 min después | 1,014 | 1,65 | 0,049 | 0,690 | 0,591 |
 | LightGBM v2 calibrado, 60 min | 0,519 | 1,15 | 0,125 | 1,000 | 1,000 |
 | LightGBM v2 calibrado, 30 min | 0,358 | 1,04 | 0,150 | 1,000 | 1,000 |
 | LightGBM v1, 60 min | 0,729 | 1,01 | 0,155 | 1,000 | 1,000 |
 | LightGBM v2, 60 min | 0,474 | 0,57 | 0,284 | 1,000 | 1,000 |
+| Ridge multinivel por grupo, hasta el cierre, entrada 20 min después | 0,274 | 0,38 | 0,351 | 1,000 | 1,000 |
 | LightGBM v1, 30 min | 0,097 | 0,26 | 0,398 | 1,000 | 1,000 |
 | LightGBM v2, 30 min | 0,093 | 0,19 | 0,424 | 1,000 | 1,000 |
 | LightGBM v2 con filtro, 60 min | -0,295 | -0,43 | 0,666 | 1,000 | 1,000 |
@@ -21,7 +23,7 @@ La ganancia diaria está en bps por acción operable, con el costo de la época 
 | Regresión logística, 60 min | -0,108 | -0,91 | 0,819 | 1,000 | 1,000 |
 | LightGBM v2 con filtro, 30 min | -2,377 | -3,60 | 1,000 | 1,000 | 1,000 |
 
-**SPA de Hansen** (¿la mejor variante le gana a la base?): p = 0,082. Cota inferior 0,067; cota superior (Reality Check de White) 0,086.
+**SPA de Hansen** (¿la mejor variante le gana a la base?): p = 0,095. Cota inferior 0,079; cota superior (Reality Check de White) 0,098.
 
 ## Contra la referencia (competidor A)
 
@@ -34,7 +36,9 @@ La ganancia diaria está en bps por acción operable, con el costo de la época 
 | LightGBM v2 con filtro, 30 min | 13,218 | 10,86 | 0,000 | 0,000 | 0,000 |
 | Regresión logística, 60 min | 10,331 | 10,57 | 0,000 | 0,000 | 0,000 |
 | LightGBM v2 calibrado, 60 min | 10,959 | 9,83 | 0,000 | 0,000 | 0,000 |
+| LightGBM v2 con régimen, hasta el cierre, entrada 20 min después | 11,453 | 9,31 | 0,000 | 0,000 | 0,000 |
 | LightGBM v2 calibrado, hasta el cierre, entrada 20 min después | 11,947 | 9,01 | 0,000 | 0,000 | 0,000 |
+| Ridge multinivel por grupo, hasta el cierre, entrada 20 min después | 10,714 | 8,94 | 0,000 | 0,000 | 0,000 |
 | LightGBM v2 calibrado, hasta el cierre | 12,423 | 8,88 | 0,000 | 0,000 | 0,000 |
 | LightGBM v1, 60 min | 11,169 | 8,68 | 0,000 | 0,000 | 0,000 |
 | LightGBM v2 con filtro, 60 min | 10,145 | 8,06 | 0,000 | 0,000 | 0,000 |

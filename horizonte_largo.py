@@ -147,14 +147,16 @@ def t_dias(valor: pd.Series, dia: pd.Series) -> float:
 
 
 def informe(pred: pd.DataFrame, o: pd.DataFrame, dias: pd.DatetimeIndex, pendientes: dict, elecciones: dict, n_operables: int,
-            comprobacion: tuple, desde: int, rapido: bool, tiempo: float, retraso: int = 0) -> str:
+            comprobacion: tuple, desde: int, rapido: bool, tiempo: float, retraso: int = 0, titulo: str | None = None,
+            probadas: str | None = None, script: str = "horizonte_largo.py") -> str:
     s, doble = resumen(o), resumen(o, 2.0)
     serie, serie_doble = serie_diaria(o, dias), serie_diaria(o, dias, 2.0)
     ic, t_ic = mv.orden_acertado(pred, MODELO)
     ultimo = int(pred["dia"].dt.year.max())
-    titulo = f"# Horizonte hasta el cierre (idea 5), entrada retrasada {retraso} minutos (variante 12)" if retraso else "# Horizonte hasta el cierre (idea 5)"
+    if titulo is None:
+        titulo = f"# Horizonte hasta el cierre (idea 5), entrada retrasada {retraso} minutos (variante 12)" if retraso else "# Horizonte hasta el cierre (idea 5)"
     L = [titulo, "",
-         f"Generado el {pd.Timestamp.now():%Y-%m-%d} con `horizonte_largo.py`. Validación hacia adelante: cada año de {int(pred['dia'].dt.year.min())} a {ultimo} se "
+         f"Generado el {pd.Timestamp.now():%Y-%m-%d} con `{script}`. Validación hacia adelante: cada año de {int(pred['dia'].dt.year.min())} a {ultimo} se "
          f"predice con un modelo entrenado solo con los años anteriores. Comparación de {desde} a {ultimo}. No incluye la muestra final."
          + (" **Corrida rápida (`--rapido`): solo el año de prueba 2024 y sin calibrar; no son los resultados oficiales.**" if rapido else ""), "",
          "Unidades: bps por operación (1 bps = 0,01%). El modelo predice el retorno hasta las 15:55 (minuto 384) menos el promedio de las acciones; "
@@ -166,7 +168,7 @@ def informe(pred: pd.DataFrame, o: pd.DataFrame, dias: pd.DatetimeIndex, pendien
           f"y el objetivo es el retorno desde esa entrada hasta las 15:55, menos el promedio de las acciones. "
           f"Base de comparación conocida: la idea 5 sin retraso, {BASE_RETRASO}." if retraso else
           f"Base de comparación conocida: la calibrada a 60 minutos con costo de la época, volviendo a decidir, dio {BASE_CONOCIDA}."), "",
-         "Variantes probadas hasta ahora: " + ("12 (t exigido con Bonferroni 2,64)." if retraso else "11 (t exigido con Bonferroni 2,61)."), "",
+         "Variantes probadas hasta ahora: " + (probadas or ("12 (t exigido con Bonferroni 2,64)." if retraso else "11 (t exigido con Bonferroni 2,61).")), "",
          "## Resultado", "",
          "| Operaciones | Días con operaciones | Acierto | Ganancia bruta | Costo | Ganancia neta | t por días | t por bloques | Neta con costo doble | t por bloques (doble) |",
          "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",

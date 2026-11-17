@@ -57,6 +57,9 @@ VARIANTES = [(f"{nombre}, {h} min", "operaciones_epoca_{h}".format(h=h), modelo,
 # Idea 5: salida a las 15:55; se compara con la referencia de 60 minutos.
 VARIANTES.append(("LightGBM v2 calibrado, hasta el cierre", "operaciones_cierre", None, 60))
 VARIANTES.append(("LightGBM v2 calibrado, hasta el cierre, entrada 20 min después", "operaciones_cierre_retraso20", None, 60))
+# Variantes 13 y 14 (variantes_b.py): sobre B, con rasgos de régimen y multinivel por grupo.
+VARIANTES.append(("LightGBM v2 con régimen, hasta el cierre, entrada 20 min después", "operaciones_v13", None, 60))
+VARIANTES.append(("Ridge multinivel por grupo, hasta el cierre, entrada 20 min después", "operaciones_v14", None, 60))
 
 
 def series_diarias() -> tuple[pd.DataFrame, pd.DataFrame]:

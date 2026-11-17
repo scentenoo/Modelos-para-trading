@@ -63,7 +63,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | Desarrollo terminado: B queda con salida a las 15:55 y entrada 20 minutos después de cada decisión (3,12 bps netos, t por bloques 2,18), sin significancia corregida por las 14 variantes. Falta la prueba en la muestra final | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | **B no pasó la muestra final** (16 de noviembre de 2026): −2,75 bps netos por operación en 2025–2026, cumple 3 de 5 criterios. En desarrollo daba 3,12 bps (t por bloques 2,18) | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -661,6 +661,22 @@ Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
 - **Costo:** el oficial (spread de la época). Las medianas trimestrales de 2025–2026 salen de `datos/spread_reciente`; la elasticidad del spread a la volatilidad se toma de 2016–2024, sin reestimarla. Decide con el trimestre anterior y paga el del trimestre en curso. El control de los bordes se reporta aparte, como información.
 - **Referencia (criterio 2):** la de 60 minutos, con las mismas operaciones de sus reglas fijas y el costo de la época, como en `comparaciones.py`. La diferencia se mide sobre la ganancia neta diaria por acción operable, con el t por bloques (una cola, 5%: t ≥ 1,65).
 - **Se usa una sola vez.** El script no muestra nada de 2025 en adelante sin una orden explícita (`--abrir`). Lo que salga se reporta tal cual.
+
+**Resultado de la muestra final** (abierta una sola vez el 16 de noviembre de 2026 con `muestra_final.py --abrir`; del 2 de enero de 2025 al 13 de noviembre de 2026, 466 días; detalle en `resultados/muestra_final.md`): **B no pasa la Fase 2. Cumple 3 de los 5 criterios.**
+
+| Criterio | Valor | Resultado |
+| --- | --- | --- |
+| 1. Ganancia neta por operación de al menos 1 bps | −2,75 bps | No pasa |
+| 2. Mayor que la referencia, con significancia | B −0,71 contra A −9,86 bps por acción y día; t por bloques 5,78 | Pasa |
+| 3. Neta no negativa con el costo doble | −4,58 bps | No pasa |
+| 4. Al menos 2.000 operaciones | 4.673 | Pasa |
+| 5. Neta positiva en al menos la mitad de los trimestres | 5 de 8 | Pasa |
+
+- **La señal no se sostuvo fuera de muestra.** La parte de selección, que en 2020–2024 daba 3,54 bps por operación con t 3,83, da −0,96 (t −0,44). La ganancia bruta es negativa (−0,92 bps) antes de pagar el costo (1,83). Contra cero, la neta no se distingue: t por bloques −0,96.
+- **Le gana a la referencia solo porque la referencia pierde mucho más:** −2,61 bps por operación y 15 veces más operaciones.
+- **Dos trimestres malos pesan más que los buenos:** el segundo de 2025 (−17,64 bps por operación) y el segundo de 2026 (−16,81). Los otros seis van de −2,46 a +8,07.
+- **Opera la mitad que en el desarrollo** (10 operaciones al día contra 19), y el control de bordes no cambia nada (−2,71).
+- **Consecuencia, según los criterios:** no se sigue a la Fase 3 con este modelo. La debilidad que ya mostraban 2023 y 2024 en el desarrollo se confirmó.
 
 **Fase 3: H0 se rechaza si, en vivo, IA + velas (D) cumple todo esto**
 

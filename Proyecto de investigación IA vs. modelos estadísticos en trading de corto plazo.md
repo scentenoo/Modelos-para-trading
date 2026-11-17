@@ -478,7 +478,7 @@ Diseño del 16 de noviembre de 2026. Las instrucciones y el formato se fijan ant
 - [ ] 3.3 Se registra todo en SQLite: noticia, respuesta y razonamiento del LLM, latencia, decisión, precio de entrada y salida, costo.
 - [ ] 3.4 Ejecución en la cuenta de papel de Alpaca, restando costos realistas: la cuenta de papel llena órdenes que en la vida real no se habrían llenado a ese precio.
 - [ ] 3.5 Revisión posterior de cada señal: acierto, falso positivo, oportunidad perdida.
-- [ ] 3.6 Al cierre, la prueba de H0: D contra B, con la muestra final que no se tocó.
+- [ ] 3.6 Al cierre, la prueba de H0: D contra B, con los días en vivo posteriores al mes de ajuste de D (la muestra final histórica ya se usó para evaluar B).
 
 Horario del mercado en Colombia: 9:30 a. m.–4:00 p. m. en invierno de EE. UU.; una hora antes desde marzo.
 
@@ -677,6 +677,13 @@ Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
 - **Dos trimestres malos pesan más que los buenos:** el segundo de 2025 (−17,64 bps por operación) y el segundo de 2026 (−16,81). Los otros seis van de −2,46 a +8,07.
 - **Opera la mitad que en el desarrollo** (10 operaciones al día contra 19), y el control de bordes no cambia nada (−2,71).
 - **Consecuencia, según los criterios:** no se sigue a la Fase 3 con este modelo. La debilidad que ya mostraban 2023 y 2024 en el desarrollo se confirmó.
+
+**Cambio de regla, decidido el 16 de noviembre de 2026 después de ver este resultado:** la Fase 3 sigue con este B aunque no haya pasado la Fase 2. Razón: la pregunta del proyecto es si la información de la IA mejora la ganancia neta de un modelo estadístico (D contra B), y eso se puede medir aunque B solo pierda. Lo que cambia:
+- **B deja de ser un candidato a ganar dinero** y queda como base de comparación: el modelo de velas tal como está, en modo sombra.
+- **La hipótesis no cambia:** H0 es que D no gana más que B. Los criterios de la Fase 3 (sección 5) siguen escritos igual y se miden en vivo, con datos posteriores a la apertura de la muestra final.
+- **Lo que no se puede concluir:** aunque D le gane a B, eso no demuestra que D gane dinero; para eso está el criterio 2 de la Fase 3 (ganancia neta por operación positiva). Con un B que pierde, lo más probable es que D también pierda: el experimento mide si la IA suma, no si el sistema ya es rentable.
+- **C (la IA sola) se mide contra no operar**, como análisis secundario.
+- **No hay dinero real** (Fase 4) a menos que D cumpla todos los criterios, incluido el de ganancia positiva.
 
 **Fase 3: H0 se rechaza si, en vivo, IA + velas (D) cumple todo esto**
 

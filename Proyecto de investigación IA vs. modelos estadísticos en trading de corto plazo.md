@@ -63,7 +63,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | --- | --- | --- | --- |
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
-| 2 · Investigación histórica | Semanas 4–11 | En curso: B queda con salida a las 15:55 y entrada 20 minutos después de cada decisión (3,12 bps netos, t por bloques 2,18), sin significancia corregida por las 12 variantes | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
+| 2 · Investigación histórica | Semanas 4–11 | Desarrollo terminado: B queda con salida a las 15:55 y entrada 20 minutos después de cada decisión (3,12 bps netos, t por bloques 2,18), sin significancia corregida por las 14 variantes. Falta la prueba en la muestra final | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
 | 3 · Experimento en vivo (cuenta de papel) | \~5 meses, por confirmar | Por empezar | IA + velas rechaza H0 frente al modelo de velas solo |
 | 4 · Dinero real | Después | Por empezar | — |
 
@@ -97,7 +97,7 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
 - [x] 2.3 **Segmentar las acciones:** hecho con `segmentos.py`: PCA sobre los retornos y clustering jerárquico sobre la correlación, y K-means sobre las características de cada acción. Ver el resumen abajo.
 - [x] 2.4 **Segmentar el tiempo en regímenes:** hecho con `segmentos.py`: mezcla gaussiana sobre volatilidad, tendencia y dispersión, con rasgos conocidos antes de la apertura. No se usa un modelo oculto de Markov, porque sus estados suavizados miran el futuro. Ver el resumen abajo.
 - [x] 2.5 **Programar la referencia (competidor A):** `referencia.py` aplica los cuatro efectos documentados con reglas fijas; el detalle está en `resultados/referencia.md`. Ver el resumen abajo.
-- [ ] 2.6 **Entrenar los modelos de velas (competidor B):** dos versiones hechas con `modelo_velas.py` y una calibración con `calibracion.py` (ver los resúmenes abajo); falta una versión que pague los costos con significancia. Plan de mejora, en este orden:
+- [x] 2.6 **Entrenar los modelos de velas (competidor B):** dos versiones hechas con `modelo_velas.py` y una calibración con `calibracion.py` (ver los resúmenes abajo). **Cerrado el 16 de noviembre de 2026 sin lograr la meta** de una versión que pague los costos con significancia corregida: la mejor, la variante 12 (salida a las 15:55, entrada 20 minutos después), da 3,12 bps netos con t por bloques 2,18, contra 2,69 exigido con 14 variantes (SPA p = 0,095). El desarrollo de B termina aquí; su prueba es la muestra final. Plan de mejora que se siguió, en este orden:
   - [x] 2.6.a **Variables comparativas:** el puesto de cada acción frente a las demás en ese momento (retornos, volumen, volatilidad) y su retorno frente al promedio de su sector. El modelo predice un orden, y hasta ahora casi todas sus variables eran de la acción sola.
   - [x] 2.6.b **Búsqueda de hiperparámetros dentro de cada entrenamiento:** para cada año de prueba se eligen con el último año anterior, nunca con el año de prueba, así que no suma variantes por combinación. La idea sale del taller de tidymodels de Freddy Hernández, cambiando la validación cruzada al azar por una que respeta el tiempo.
   - [x] 2.6.c **Calibrar la predicción:** el modelo exagera (en la décima más fuerte predice cerca del doble de lo que ocurre), así que el filtro de costo deja pasar operaciones que no pagan. Se corrige con años anteriores al de prueba. Reutiliza las predicciones guardadas, sin reentrenar. Hecho con `calibracion.py` el 16 de noviembre de 2026, con la regla fijada antes de correr (ver el resumen abajo). Cuenta como una variante por horizonte: con ella van 8 variantes probadas.
@@ -120,8 +120,20 @@ Plazo máximo: 6–8 semanas. El mejor modelo de velas pasa al experimento en vi
   - **Los rasgos de régimen no ayudan:** la señal es casi la misma (selección 3,48 bps, t 3,86), pero gana menos. Coincide con el diagnóstico: la señal está en los cuatro regímenes.
   - **Agrupar con un modelo lineal pierde frente a LightGBM:** ordena peor (correlación de rangos 0,017 contra 0,028) y no paga el costo doble. Modelar por grupo no mejora a un modelo único; la hipótesis de trabajo de la Fase 2 no se confirma.
   - Con las 14 variantes, el SPA de Hansen contra no operar da p = 0,095.
-- [ ] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`.
-- [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, el modelo de IA y las instrucciones para que la IA lea noticias. El modelo es Claude Haiku 5.5 por API (ver "El modelo de IA"); los modelos locales quedaron como prueba.
+- [x] 2.8 **Revisión contra el sobreajuste** antes de aprobar un modelo, con `backtest-expert` y `residual-edge-analyzer`. Hecha sobre la versión final de B (variante 12) con `revision_cierre.py --retraso 20` el 16 de noviembre de 2026; detalle en `resultados/revision_cierre_retraso20.md`. Es descriptiva y no cuenta como variante:
+
+| Prueba | Resultado |
+| --- | --- |
+| Umbral de entrada (k veces el costo esperado) | Sin pico: t de 2,15 a 2,30 de k = 1 a 2; baja a 1,69 con k = 0,75 y a 1,17 con k = 0,5 |
+| Hora de salida, mismas operaciones | 14:55: 1,42 bps (t 1,22); 15:25: 1,78 (1,45); 15:40: 2,15 (1,73); 15:55: 3,07 (2,15) |
+| Costo 1,5 y 2 veces el de la época | 1,99 bps (t 1,41) y 0,92 (t 0,66) |
+| Mercado (`residual-edge-analyzer`) | Ventaja propia: beta 0,008 frente a SPY, 65% de las ventanas de 63 días positivas (pide 60%) |
+| Concentración | Los 10 mejores días aportan el 67%; sin ellos, 1,03 bps (t 0,87). Sin 2020, 0,74 (t 0,54). NVDA, COP, TSLA, AMD e INTC aportan el 60% |
+| Por régimen | Gana en tres de cuatro; pierde en el régimen 3 (−4,96% anual) |
+| Evaluador de `backtest-expert` | REFINAR, 67 de 100: la expectativa por operación (0,03%) es la parte débil; caída máxima 5,8% |
+
+  - **Lectura:** igual que la idea 5 sin retraso. La señal es propia y no depende del umbral exacto, pero el margen es fino frente al costo, depende de pocos días (marzo de 2020 y febrero de 2022) y más de un tercio de la ganancia bruta llega en la última hora. Se aprueba para la muestra final tal como está, sin cambios: lo que la revisión señala no se corrige mirando estos mismos datos.
+- [ ] 2.9 **Montar lo que se dejó para el final:** el PC viejo como servidor, el modelo de IA y las instrucciones para que la IA lea noticias. El modelo es Claude Haiku 5.5 por API (ver "El modelo de IA"); los modelos locales quedaron como prueba. La parte de la IA está hecha; del servidor faltan la clave de despliegue en GitHub y la IP fija. Lo que falta es infraestructura de la Fase 3 y no cambia nada de B, así que no impide abrir la muestra final (decidido el 16 de noviembre de 2026).
   - [x] PC viejo con Debian sin entorno gráfico.
   - [x] Ollama instalado en el PC viejo, con el modelo pequeño `llama3.2:1b` (mil millones de parámetros, cuantizado, ~1,3 GB), sirviendo peticiones por su API local en el puerto 11434.
   - [x] Instrucciones y formato de respuesta diseñados (versión 1) y `lector_noticias.py` programado, con conexión a Ollama.

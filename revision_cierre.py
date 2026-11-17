@@ -21,7 +21,8 @@ Capital: una unidad por acción operable, como en ventaja.py.
 Muestra final: no se usa nada desde referencia.CORTE.
 
 Uso:
-    python revision_cierre.py
+    python revision_cierre.py               # idea 5 sin retraso
+    python revision_cierre.py --retraso 20  # versión final de B (variante 12); escribe revision_cierre_retraso20.md
 
 Salida:
     resultados/revision_cierre.md
@@ -57,9 +58,14 @@ def caida_maxima(r: pd.Series) -> float:
 
 
 def main() -> None:
-    pred = pd.read_parquet(RAIZ / "modelos" / "predicciones_cierre.parquet")
+    import argparse
+    ap = argparse.ArgumentParser(description="Revisión contra el sobreajuste de la idea 5.")
+    ap.add_argument("--retraso", type=int, default=0, help="Minutos de entrada retrasada (20 = variante 12, la versión final de B)")
+    retraso = ap.parse_args().retraso
+    sufijo = f"_retraso{retraso}" if retraso else ""
+    pred = pd.read_parquet(RAIZ / "modelos" / f"predicciones_cierre{sufijo}.parquet")
     pred = pred[(pred["dia"].dt.year >= hl.DESDE) & (pred["dia"] < CORTE)]
-    o = pd.read_parquet(RAIZ / "modelos" / "operaciones_cierre.parquet")
+    o = pd.read_parquet(RAIZ / "modelos" / f"operaciones_cierre{sufijo}.parquet")
     p = referencia.cargar_precios()
     dias = pd.DatetimeIndex(p["dias"])
     dias = dias[(dias.year >= hl.DESDE) & (dias < CORTE) & ~p["medio_dia"]]
@@ -71,8 +77,10 @@ def main() -> None:
     operables = set(np.array(UNIVERSO)[universo[hl.HORIZONTE_BASE]]) & set(pred["symbol"].unique()) & set(muestras["symbol"].unique())
 
     cab = ["| Versión | Operaciones | Bruta | Costo | Neta | t por bloques |", "| --- | --- | --- | --- | --- | --- |"]
-    L = ["# Revisión contra el sobreajuste: horizonte hasta el cierre (paso 2.8)", "",
-         f"Generado el {pd.Timestamp.now():%Y-%m-%d} con `revision_cierre.py` sobre lo guardado por `horizonte_largo.py`, {hl.DESDE}–{CORTE.year - 1}. "
+    titulo = (f"# Revisión contra el sobreajuste: B final, entrada {retraso} minutos después (variante 12, paso 2.8)" if retraso
+              else "# Revisión contra el sobreajuste: horizonte hasta el cierre (paso 2.8)")
+    L = [titulo, "",
+         f"Generado el {pd.Timestamp.now():%Y-%m-%d} con `revision_cierre.py{' --retraso ' + str(retraso) if retraso else ''}` sobre lo guardado por `horizonte_largo.py`, {hl.DESDE}–{CORTE.year - 1}. "
          "Es descriptivo: no reentrena, no cuenta como variante y ninguna versión de aquí se adopta. Unidades: bps por operación; "
          "el t usa el remuestreo por bloques de `comparaciones.py`.", ""]
 
@@ -80,7 +88,7 @@ def main() -> None:
     L += ["## 1. Umbral de entrada", "", "Se opera si la predicción calibrada supera k veces el costo esperado; se paga el costo de la época sin multiplicar.", "", *cab]
     for k in UMBRALES:
         costo_k = lambda x, atras=0, k=k: base(x, atras) * (k if atras == 1 else 1.0)
-        L.append(fila(f"k = {num(k, 2)}" + (" (diseño)" if k == 1 else ""), hl.operar(pred, hl.CALIBRADO, operables, costo_k), dias))
+        L.append(fila(f"k = {num(k, 2)}" + (" (diseño)" if k == 1 else ""), hl.operar(pred, hl.CALIBRADO, operables, costo_k, retraso), dias))
 
     # 2. Hora de salida
     s = pd.Index(UNIVERSO).get_indexer(o["symbol"])
@@ -103,7 +111,7 @@ def main() -> None:
     # 4. Concentración y mercado
     n = int(universo[hl.HORIZONTE_BASE].sum())
     t = ventaja.serie_diaria(o, hl.HORIZONTE_BASE, n)
-    j = ventaja.analizar(t, "cierre")
+    j = ventaja.analizar(t, f"cierre{sufijo}")
     seccion = ventaja.seccion(hl.HORIZONTE_BASE, o, t, j)
     seccion[0] = f"## 4. Concentración y mercado ({t.index.min():%Y-%m-%d} a {t.index.max():%Y-%m-%d}, {len(t)} días)"
     L += [""] + seccion
@@ -118,7 +126,7 @@ def main() -> None:
           f"- Caída máxima de la curva diaria (una unidad de capital por acción operable): {num(caida_maxima(r), 2)}%. Retorno anual medio: {num(100 * 252 * r.mean(), 2)}%.",
           f"- Parámetros elegidos a mano: momentos de decisión, hora de salida, umbral (k = 1) y lista de acciones; los hiperparámetros se eligen dentro de cada año.", ""]
     texto = "\n".join(L)
-    (RESULTADOS / "revision_cierre.md").write_text(texto, encoding="utf-8")
+    (RESULTADOS / f"revision_cierre{sufijo}.md").write_text(texto, encoding="utf-8")
     print(texto)
 
 

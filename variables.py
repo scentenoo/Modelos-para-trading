@@ -133,7 +133,10 @@ def conteo_noticias(momentos_utc: np.ndarray, cierre_previo_utc: np.ndarray, not
     hora = np.timedelta64(60, "m")
     desde_60 = np.searchsorted(noticias_utc, momentos_utc - hora, side="left")
     desde_cierre = np.searchsorted(noticias_utc, cierre_previo_utc, side="left")
-    ultima = np.where(hasta > 0, noticias_utc[np.maximum(hasta - 1, 0)], np.datetime64("NaT"))
+    if len(noticias_utc):
+        ultima = np.where(hasta > 0, noticias_utc[np.maximum(hasta - 1, 0)], np.datetime64("NaT"))
+    else:                                                                   # símbolo sin noticias (SPY, GOOGL en vivo)
+        ultima = np.full(len(momentos_utc), np.datetime64("NaT"), dtype="datetime64[ns]")
     minutos = (momentos_utc - ultima) / np.timedelta64(1, "m")
     return dict(not_60m=hasta - desde_60, not_desde_cierre=np.maximum(hasta - desde_cierre, 0),
                 min_desde_noticia=np.where(hasta > 0, np.minimum(minutos, 10_000), 10_000))

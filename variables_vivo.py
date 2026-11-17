@@ -82,8 +82,13 @@ def noticias_de_archivos() -> dict[str, np.ndarray]:
 # ---------------------------------------------------------------- cálculo
 
 def columnas_del_modelo() -> list[str]:
-    """Columnas de entrada, en el orden de modelo_velas.cargar() (se leen del esquema de la tabla)."""
-    esquema = pq.read_schema(variables.CARPETA / "2024.parquet").names
+    """Columnas de entrada, en el orden de modelo_velas.cargar() (se leen del esquema de la tabla).
+    En el PC viejo no está la tabla histórica: ahí se usa el orden guardado con el modelo final."""
+    tabla = variables.CARPETA / "2024.parquet"
+    if not tabla.exists():
+        import json
+        return json.loads((modelo_velas.CARPETA / "final" / "modelo_b.json").read_text(encoding="utf-8"))["columnas"]
+    esquema = pq.read_schema(tabla).names
     base = [c for c in esquema if c not in modelo_velas.NO_SON_VARIABLES] + ["sector_n"]
     return base + [f"p_{c}" for c in modelo_velas.CON_PUESTO] + [f"s_{c}" for c in modelo_velas.CON_SECTOR]
 

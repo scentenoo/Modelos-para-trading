@@ -1,6 +1,6 @@
 # IA para noticias + modelos estadísticos en trading de corto plazo
 
-Proyecto de investigación · @Samir Centeno · versión 4 · 16 de noviembre de 2026
+Proyecto de investigación · @Samir Centeno · versión 6 · 19 de noviembre de 2026
 
 ## 1. Resumen
 
@@ -14,7 +14,7 @@ Proyecto de investigación · @Samir Centeno · versión 4 · 16 de noviembre de
 
 **Naturaleza:** es un proyecto de investigación. El dinero real llega solo si H0 se rechaza.
 
-**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 terminada: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). Desde el 16 de noviembre de 2026 el costo oficial es el spread de cada época y la prueba oficial usa remuestreo por bloques. Con esas reglas se probó un horizonte hasta las 15:55 (idea 5): da 2,87 bps netos por operación (t 2,30) y no pierde con el costo doble, el mejor resultado hasta ahora, pero no pasa la corrección por las variantes probadas y sin 2020 baja a 1,24 bps. Para operar con el plan gratuito de datos se probó entrar 20 minutos después de cada decisión: da 3,07 bps (t 2,15). Las dos versiones pasan el control del costo en la apertura y el cierre, y B queda con la entrada retrasada (3,12 bps, t 2,18; con 12 variantes se exige 2,64). Con los grupos y regímenes como variables o un modelo multinivel por grupo (pasos 2.6.d y 2.7) no mejora. **Resultado de la Fase 2, 16 de noviembre de 2026: B no pasó la muestra final.** En 2025–2026 da −2,75 bps netos por operación: la señal de selección desaparece fuera de muestra, como ya anticipaban 2023 y 2024. La IA quedó lista (Claude Haiku 5.5 por API, ~2 s y ~0,025 centavos por noticia) y el sistema en vivo corre en el PC viejo (noticias con Haiku, B en modo sombra, actualización nocturna). **La Fase 3 se redujo a una semana de prueba técnica** (17 al 23 de noviembre de 2026), sin órdenes y sin prueba de H0: el proyecto cierra con el resultado negativo de la Fase 2, y la pregunta de si la IA mejora a un modelo de velas queda abierta.
+**Dónde vamos:** Fase 1 (datos) completa: las cinco fuentes están descargadas, comprobadas y se actualizan solas cada noche. Fase 2 terminada: la barrera de costos está medida (paso 2.1), las variables están construidas (paso 2.2), la referencia está programada (paso 2.5), los grupos de acciones y los regímenes de mercado están calculados (pasos 2.3 y 2.4) y hay dos versiones del modelo de velas (paso 2.6): las dos tienen señal, pero ninguna paga los costos. Calibrar la predicción (paso 2.6.c) mejora la segunda: a 60 minutos da 2,07 bps netos por operación y no pierde con el costo doble, pero no se sostiene al revisarla: depende de marzo de 2020, casi un tercio es movimiento del mercado y no selección, y corregida por las 10 variantes probadas no se distingue de cero (SPA de Hansen, p = 0,23). El modelo sí elige bien las acciones (t de 4,6 a 5,3 en la parte de selección), pero gana unos 2,2 a 2,6 bps brutos por operación contra un costo de 1,5 a 1,7. El filtro de operaciones (meta-labeling) se probó y no le gana a la calibración. Al volver a costear las operaciones con el spread de cada época, la ganancia se borra: el modelo opera en días de mucha volatilidad, cuando el spread es más del doble del que se usaba, y la calibrada a 60 minutos baja a 0,51 bps (t 0,57). Desde el 16 de noviembre de 2026 el costo oficial es el spread de cada época y la prueba oficial usa remuestreo por bloques. Con esas reglas se probó un horizonte hasta las 15:55 (idea 5): da 2,87 bps netos por operación (t 2,30) y no pierde con el costo doble, el mejor resultado hasta ahora, pero no pasa la corrección por las variantes probadas y sin 2020 baja a 1,24 bps. Para operar con el plan gratuito de datos se probó entrar 20 minutos después de cada decisión: da 3,07 bps (t 2,15). Las dos versiones pasan el control del costo en la apertura y el cierre, y B queda con la entrada retrasada (3,12 bps, t 2,18; con 12 variantes se exige 2,64). Con los grupos y regímenes como variables o un modelo multinivel por grupo (pasos 2.6.d y 2.7) no mejora. **Resultado de la Fase 2, 16 de noviembre de 2026: B no pasó la muestra final.** En 2025–2026 da −2,75 bps netos por operación: la señal de selección desaparece fuera de muestra, como ya anticipaban 2023 y 2024. La IA quedó lista (Claude Haiku 5.5 por API, ~2 s y ~0,025 centavos por noticia) y el sistema en vivo corre en el PC viejo (noticias con Haiku, B en modo sombra, actualización nocturna). **La Fase 3 se redujo a una semana de prueba técnica** (17 al 23 de noviembre de 2026), sin órdenes y sin prueba de H0: el proyecto cierra con el resultado negativo de la Fase 2, y la pregunta de si la IA mejora a un modelo de velas queda abierta. **Después del cierre (17 de noviembre de 2026),** Claude y Gemini debatieron cómo volverlo rentable y un juez independiente eligió una línea posible: eventos de resultados del S&P 500 a 3 días (ver "Después del cierre", al final de la sección 3). Queda escrita como posible continuación, fuera de este estudio. **Estudio cerrado el 19 de noviembre de 2026:** la prueba técnica se terminó antes de lo previsto, tras 3 sesiones (17 al 19 de noviembre; la primera se perdió por una falla ya corregida). El sistema en vivo funcionó: Haiku respondió bien las 306 noticias, con una mediana de 1,7 s y un costo total de 0,07 dólares, y B en modo sombra hizo 23 operaciones, con −14,96 bps netos por operación (solo informativo). Los servicios del PC viejo quedaron apagados.
 
 ## 2. Cómo funciona el sistema
 
@@ -64,7 +64,7 @@ Cada fase avanza solo si cumple su criterio de salida.
 | 0 · Preparación | Semana 1 | Completa | Llaves funcionando y criterios de éxito escritos |
 | 1 · Datos | Semanas 2–3 | Completa | La base se actualiza sola sin intervención |
 | 2 · Investigación histórica | Semanas 4–11 | **B no pasó la muestra final** (16 de noviembre de 2026): −2,75 bps netos por operación en 2025–2026, cumple 3 de 5 criterios. En desarrollo daba 3,12 bps (t por bloques 2,18) | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples | Un modelo de velas supera la referencia en ganancia neta fuera de muestra, corregido por comparaciones múltiples |
-| 3 · Experimento en vivo | Del 17 al 23 de noviembre de 2026 | Reducida a una semana de prueba técnica en modo sombra, sin órdenes y sin prueba de H0 | El sistema en vivo corre una semana sin fallas |
+| 3 · Experimento en vivo | Del 17 al 19 de noviembre de 2026 | **Cerrada el 19 de noviembre de 2026**: prueba técnica de 3 sesiones en modo sombra, sin órdenes y sin prueba de H0. El sistema funcionó; B dio −14,96 bps netos por operación en 23 operaciones (solo informativo) | El sistema en vivo corre sin fallas |
 | 4 · Dinero real | — | No se hace: B no pasó la Fase 2 y no hay prueba de H0 | — |
 
 ### Fase 0 · Preparación
@@ -560,6 +560,38 @@ Con las operaciones de la idea 5 como B (2020–2024): 27 operaciones al día, d
 - [ ] 4.3 Órdenes con aprobación manual al comienzo.
 - [ ] 4.4 Escalar solo si los resultados reales se parecen a los de papel.
 
+### Después del cierre · Debates de ideas para volver rentable el proyecto (17 de noviembre de 2026)
+
+Con B descartado, Samir pidió ideas nuevas para ganar dinero. Claude (Opus 5.5, en Claude Code) y Gemini (`gemini-3.8-flash-high`, en Antigravity CLI) debatieron sobre el repo. Decide un juez: una sesión independiente de Claude Opus 5.5 que recibe los debates anonimizados, con los participantes como A y B asignados al azar. No ve la conversación del debate, solo puede leer archivos y buscar en la web, y su decisión se adopta sin revisión de los participantes. Cómo se hace está en `debate/PROTOCOLO.md`. Los debates y los dictámenes están en `debate/`.
+
+**Diagnóstico compartido:** B no falló por el modelo, sino por el terreno. Operar dentro del día en 50 megacaps, pagando el spread con señales de precio y volumen, deja una señal de 2 a 5 bps contra un costo de ~2 bps, en el mercado más eficiente que existe. La ventaja ya venía cayendo en 2023 y 2024.
+
+**Ideas descartadas o archivadas:**
+- La deriva tras resultados con las cifras de la SEC: llegan una mediana de 7 días tarde (sección 4).
+- La tendencia en ETF: es gestión de riesgo, no rentabilidad, y existe empaquetada.
+- El impulso 12-1: existe como ETF y como filtro destruye la potencia.
+- La reversión de sobreventa: regla pública desde 2009, filtro LLM imposible de probar en el histórico, y la reversión se gana de noche.
+- Los árboles para la salida: datos con retraso y una variante más.
+- Los spreads de crédito de puts: sin IA y sin datos de opciones.
+
+**Línea elegida por el juez** (`debate/2026-11-17-evaluacion-ideas.dictamen.md`; confianza media): **eventos de resultados del S&P 500, con su composición histórica, solo compras, tenencia fija de 3 días, entrada en la subasta de apertura.** Es la hipótesis H1 trasladada a un horizonte donde el costo pesa poco frente al movimiento.
+1. **Primero en el histórico (2016–2024):** la base sin IA, que es la deriva tras la reacción de precio del día del anuncio (del cierre previo al cierre del día de reacción, contra SPY). Al mismo tiempo, el costo de la subasta de apertura en acciones sueltas, medido con el SIP histórico. Ese costo nunca se midió: el de "apertura" del repo es de 10:00 a 10:35. **Si la neta con ese costo es ≤ 0, o el t por bloques < 2, se para antes de ir a vivo.**
+2. **Si la base pasa, la IA en vivo desde enero de 2027:** la puntuación del LLM sobre el 8-K y las noticias (sorpresa frente al consenso y la guía), fijada de antemano y **sin entrenar**, contra la base y en los mismos eventos. Se descarta si a las 2 temporadas la correlación de rangos con el retorno a 3 días no es positiva con t por bloques ≥ 1,65, o no supera a la de la base. La ganancia definitiva se mide a las 4 temporadas.
+3. **Catalizadores fuera de horario** (analistas, fusiones, productos): segunda prueba con la misma infraestructura, con t ≥ 1,96, solo si no suma trabajo aparte.
+4. **Prima nocturna en SPY y QQQ:** una tarde de prueba, solo con 2016–2024 y la regla escrita antes. Se cierra si no supera en Sharpe a comprar y mantener. NightShares (NSPY) perdió 6,9% contra +22% del S&P 500 antes de cerrar en 2023.
+
+**Reglas que salieron de los debates:**
+- La vara es comprar y mantener SPY. El capital que la estrategia no usa va a letras del Tesoro o efectivo remunerado, no a SPY.
+- Nada de mirar 2025–2026 para ajustar. Cualquier prueba que lo incluya necesita la regla escrita antes y, si falla, no se prueban variantes.
+- Sin variables extra (impulso, regímenes) en el diseño inicial.
+
+**Condiciones previas pendientes:**
+- Ampliar velas diarias, noticias y 8-K de 53 símbolos al S&P 500. Hoy `descargar_datos.py`, `descargar_sec.py` y `noticias_vivo.py` usan la misma lista de 53.
+- Medir en las noticias históricas en qué porcentaje de los anuncios el consenso está publicado antes de las 9:30. Solo mira horarios, no aciertos, así que no viola la regla del pasado.
+- Confirmar que Alpaca abre cuentas a residentes de Colombia.
+- Consultar a un contador colombiano sobre los impuestos a las ganancias en el exterior y la retención de EE. UU. sobre los dividendos.
+- La cuenta de papel de Alpaca simula las órdenes de subasta como órdenes de mercado: el costo de la subasta no se puede medir en papel.
+
 ## 4. Datos
 
 Fuente principal: Alpaca, plan gratuito ($0). Todo sale con las mismas llaves de la cuenta de papel.
@@ -689,7 +721,35 @@ Si no pasa, se reporta y no se sigue a la Fase 3 con ese modelo.
 - **Para qué sirve:** comprobar que el lector de noticias con Haiku, B en modo sombra, el cierre diario y la actualización nocturna funcionan juntos en sesiones reales, y medir latencia, costo de la IA y volumen de noticias.
 - **Lo que no se puede concluir:** una semana son unas 50 operaciones de B; el cálculo de potencia pide meses, y D necesita un mes de ajuste antes de compararse. H0 queda sin probar por falta de datos, no rechazada ni aceptada.
 - **Cómo cierra el proyecto:** con el resultado negativo de la Fase 2 (B no pasó la muestra final) y con el sistema en vivo funcionando como prueba técnica. La pregunta de si la IA mejora a un modelo de velas queda abierta.
-- **Automatizado en el PC viejo:** `prueba_tecnica.py` escribe un informe cada día hábil a las 5:30 p. m. (temporizador `informe-tecnico`), y el lunes 23 de noviembre a las 5:45 p. m. el temporizador `fin-prueba` escribe el resumen de la semana y apaga los servicios (`noticias-vivo`, `b-sombra`, `actualizar-datos` e `informe-tecnico`), para que no siga el gasto en Haiku. Todo queda en `datos/registros/prueba_tecnica.md` del PC viejo; falta copiar el resumen a este documento.
+- **Automatizado en el PC viejo:** `prueba_tecnica.py` escribe un informe cada día hábil a las 5:30 p. m. (temporizador `informe-tecnico`), y el lunes 23 de noviembre a las 5:45 p. m. el temporizador `fin-prueba` escribe el resumen de la semana y apaga los servicios (`noticias-vivo`, `b-sombra`, `actualizar-datos` e `informe-tecnico`), para que no siga el gasto en Haiku. Todo queda en `datos/registros/prueba_tecnica.md` del PC viejo. Al final se cerró antes: ver el resultado abajo.
+
+#### Resultado de la prueba técnica (cerrada el 19 de noviembre de 2026)
+
+El 19 de noviembre de 2026 se decidió terminar el estudio ese mismo día, sin esperar al 23. La prueba duró 3 sesiones (17, 18 y 19 de noviembre), de las que 2 sirvieron completas para B. El informe diario y el resumen están en `resultados/prueba_tecnica.md`, y las operaciones de B en `resultados/prueba_tecnica_operaciones.csv`.
+
+**Lector de noticias con Claude Haiku 5.5**
+
+- Recibió 306 noticias y mandó las 306 a la IA. Las 306 tuvieron respuesta válida, sin errores de la API ni reintentos.
+- Latencia por noticia: mediana de 1,7 s, 90% por debajo de 2,2 s y máxima de 7,0 s.
+- Tokens: 510.694 de entrada y 45.771 de salida, con un costo total de 0,074 dólares (unos 0,025 centavos por noticia, como se había estimado).
+- Un corte de conexión con Alpaca (19 de noviembre, 2:36 a. m. de Nueva York) se recuperó solo en la vuelta siguiente.
+
+**B en modo sombra**
+
+- **17 de noviembre:** se saltaron los 6 momentos por una falla en `conteo_noticias` (SPY y GOOGL sin noticias en vivo daban un arreglo vacío). Se corrigió y se desplegó ese mismo día a las 16:28.
+- **18 y 19 de noviembre:** se hicieron los 12 momentos y los 2 cierres, sin saltos. El cálculo de cada momento tardó unos 10 s y la descarga entre 1 y 12 s.
+
+| Día | Operaciones | Bruto por operación | Costo | Neto por operación | Neto total | Acierto |
+| --- | --- | --- | --- | --- | --- | --- |
+| 18 de noviembre | 7 | −2,61 bps | 1,57 | −4,19 bps | −29 bps | 57% |
+| 19 de noviembre | 16 | −17,54 bps | 2,14 | −19,68 bps | −315 bps | 75% |
+| **Total** | **23** | **−13,00 bps** | **1,97** | **−14,96 bps** | **−344 bps** | 70% |
+
+El 19 de noviembre acertó 12 de 16 y aun así perdió: fue un día de caída fuerte en tecnología, y tres compras (GOOGL −6,3%, NVDA −4,9% e INTC −2,9%) suman −1.406 bps. Con 23 operaciones esto no dice nada estadísticamente, pero va en la misma dirección que la muestra final (−2,75 bps).
+
+**Conclusión de la prueba técnica:** la parte técnica funciona. El lector de noticias, B en modo sombra, el cierre diario, la actualización nocturna y los informes automáticos corrieron juntos en sesiones reales, en un portátil de 4 GB, con carga baja, sin errores del sistema y a 46 °C. La única falla fue la del primer día. La parte económica no cambia: B no tiene ventaja y H0 queda sin probar.
+
+**Servicios apagados el 19 de noviembre de 2026:** `noticias-vivo`, `b-sombra`, `actualizar-datos`, `informe-tecnico` y `fin-prueba`, desactivados con `systemctl disable --now`. Los datos y los registros siguen en el PC viejo.
 
 **Fase 3: H0 se rechaza si, en vivo, IA + velas (D) cumple todo esto** (no se llegó a medir: la Fase 3 se redujo a una semana de prueba técnica; ver el resultado de la muestra final)
 
@@ -753,6 +813,9 @@ Una capa común decide cuánto apostar, igual para todos los competidores; así 
 | `filtro.py` | Filtro de operaciones (meta-labeling): un clasificador decide cuáles operaciones del modelo de velas se hacen; escribe `resultados/filtro.md` |
 | `calibracion.py` | Corrige cuánto exagera el modelo de velas con las predicciones de años anteriores y vuelve a operar; escribe `resultados/calibracion.md` |
 | `precios.py` | Lee las velas y las corrige por splits, dividendos y escisiones: `cargar("NVDA")` |
+| `debate/gemini.ps1` | Pide a Gemini (Antigravity CLI, `agy`) su turno en un debate, en modo solo lectura |
+| `debate/juez.ps1` | Anonimiza un debate (y los previos, con las mismas letras), lo copia a una carpeta aislada y lo hace dictaminar por una sesión independiente de Claude Opus; escribe `debate/<debate>.dictamen.md` |
+| `debate/hablar-juez.ps1` | Retoma la sesión del juez de un debate para hablar con él directamente |
 
 ### Habilidades instaladas en `.claude/skills/`
 
@@ -823,7 +886,7 @@ El portátil entrena y el PC viejo solo opera. Un modelo entrenado es un archivo
 - **Si hiciera falta el histórico en el PC viejo, se copia** por la red local o una memoria USB; no se vuelve a descargar. Los scripts detectan lo que ya existe y solo bajan lo que falta.
 - **Modelo de IA:** Claude Haiku 5.5 por API; el PC viejo solo envía las noticias y guarda las respuestas. Se probó un modelo local (`llama3.2:1b` con Ollama en el PC viejo): con esquema JSON responde bien, pero a ~100 s por noticia, y un modelo mediano (7–8B) no cabe en sus 4 GB. Por costo, velocidad y mantenimiento se eligió Haiku (16 de noviembre de 2026).
 
-El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Se administra desde el portátil por SSH (Tailscale). Tiene el proyecto en `/home/samir/Modelos-para-trading` con su `.venv` y su `.env`, y dos servicios de systemd:
+El PC viejo ya tiene Debian instalado, sin entorno gráfico (noviembre de 2026). Se administra desde el portátil por SSH (Tailscale). Tiene el proyecto en `/home/samir/Modelos-para-trading` con su `.venv` y su `.env`. Tenía estos servicios de systemd, **todos apagados y desactivados desde el 19 de noviembre de 2026, al cerrar el estudio**:
 - `noticias-vivo`: lee noticias en vivo con Claude Haiku 5.5, siempre encendido.
 - `b-sombra`: B en modo sombra, siempre encendido; trabaja en los días de sesión de 10:20 a 16:21 de Nueva York.
 - `actualizar-datos` (temporizador, 9:00 p. m. de Bogotá): baja las velas de 2025 en adelante, los ajustes y las noticias recientes.
@@ -845,6 +908,7 @@ Además, `informe-tecnico` y `fin-prueba` para la semana de prueba técnica (ver
 - [ ] Bróker definitivo (Alpaca o Interactive Brokers). Revisado el 16 de noviembre de 2026: la página de Alpaca no lista países y pide escribir a soporte; Interactive Brokers acepta residentes en Colombia según guías de terceros, con el plan Pro (unos 0,005 dólares por acción, mínimo 1 dólar por orden). Esa comisión no está en el costo que usa el proyecto. Falta confirmarlo con cada bróker.
 - [ ] Regla de "pattern day trader": falta saber si el bróker elegido ya aplica el cambio de FINRA o mantiene un mínimo propio.
 - [ ] Compra del segundo módulo de RAM.
+- [ ] Si se sigue con la línea elegida por el juez ("Después del cierre", sección 3): fijar el protocolo de la base de eventos de resultados y de la medición del costo de la subasta antes de correr nada.
 
 ### Decisiones cerradas
 
@@ -862,6 +926,7 @@ Además, `informe-tecnico` y `fin-prueba` para la semana de prueba técnica (ver
 - [x] Datos de velas en vivo (16 de noviembre de 2026): se prueba primero entrar 20 minutos después del momento de decisión, para poder usar las velas del plan gratuito, que llegan con 15 minutos de retraso (opción c). Se descartó de entrada usar solo las velas de IEX, porque su volumen no coincide con el del entrenamiento. Si la prueba pierde mucho, se paga el plan en tiempo real de Alpaca (99 dólares al mes). Diseño en "Idea 5 con entrada retrasada".
 - [x] Prueba oficial de significancia: remuestreo por bloques de días seguidos (16 de noviembre de 2026), porque los días buenos vienen en racha.
 - [x] Cómo se entrena D (16 de noviembre de 2026): los primeros meses en la cuenta de papel sirven para ajustar una capa pequeña, con pocos coeficientes, que combina la predicción de B con las seis variables de la IA. La comparación D contra B se hace en los meses siguientes, y la capa se reajusta cada mes solo con lo anterior. Se descartó entrenar con noticias históricas, porque el LLM ya sabe qué pasó después, y una regla fija sin entrenar. Falta fijar cuántos meses dura el ajuste inicial y qué forma tiene la capa.
+- [x] Cierre del estudio (19 de noviembre de 2026): la prueba técnica termina tras 3 sesiones, antes del 23 de noviembre, y se apagan los servicios del PC viejo. El proyecto cierra con el resultado negativo de la Fase 2 y el sistema en vivo comprobado. La línea de eventos de resultados que eligió el juez queda escrita como posible continuación, sin empezarla.
 - [x] El portátil entrena y el PC viejo opera.
 - [x] El PC viejo y los modelos de IA se configuran al final.
 - [x] Regla de "pattern day trader": el [aviso 26-10 de FINRA](https://www.finra.org/rules-guidance/notices/26-10) eliminó el conteo de operaciones y el mínimo de 25.000 dólares desde el 4 de junio de 2026. Los brókers pueden aplicarlo por etapas hasta el 20 de octubre de 2027. Queda el piso general de 2.000 dólares de una cuenta de margen.
